@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Weave Time — Staff</title>
+  <meta name="theme-color" content="#0B1F3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root { --navy:#0B1F3A; --gold:#C4A35A; --paper:#F4EFE6; --ink:#1a1a1a; --muted:#5c6570; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--paper); color:var(--ink); }
+    header { background:var(--navy); color:#fff; padding:1rem 1.1rem 1.2rem; }
+    header strong { letter-spacing:.12em; font-size:.78rem; }
+    header p { margin:.35rem 0 0; color:#c9d2dc; font-size:.9rem; }
+    main { padding:1rem; max-width:440px; margin:0 auto; }
+    .card { background:#fff; border-radius:14px; padding:1rem; margin-bottom:1rem; box-shadow:0 1px 0 rgba(11,31,58,.08); }
+    h2 { margin:.1rem 0 .7rem; font-size:1.05rem; }
+    label { display:block; font-size:.78rem; color:var(--muted); margin:.55rem 0 .2rem; }
+    input, textarea, select { width:100%; padding:.65rem .7rem; border:1px solid #d7d1c6; border-radius:8px; font:inherit; }
+    textarea { min-height:90px; }
+    button { width:100%; margin-top:.55rem; padding:.8rem; border:0; border-radius:10px; font-weight:700; font-size:1rem; }
+    .go { background:var(--gold); color:var(--navy); }
+    .navy { background:var(--navy); color:#fff; }
+    .ghost { background:transparent; color:var(--navy); border:1px solid #cfc8bb; }
+    .row { display:flex; gap:.5rem; }
+    .row button { flex:1; }
+    .ok { color:#1b5e20; font-size:.88rem; }
+    .list { font-size:.88rem; color:var(--muted); white-space:pre-wrap; }
+    nav { display:flex; gap:.4rem; margin-bottom:1rem; }
+    nav button { margin:0; padding:.55rem; font-size:.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>WEAVE TIME</strong>
+    <p>Ask Weave. Clock, PTO, suggestion box.</p>
+  </header>
+  <main>
+    <nav>
+      <button class="navy" data-tab="clock">Clock</button>
+      <button class="ghost" data-tab="pto">PTO</button>
+      <button class="ghost" data-tab="box">Box</button>
+    </nav>
+
+    <section class="card" id="clock">
+      <h2 id="clockTitle">Off the clock</h2>
+      <label>Your name</label>
+      <input id="name" placeholder="First and last" />
+      <div class="row">
+        <button class="go" id="in">Clock in</button>
+        <button class="navy" id="out">Clock out</button>
+      </div>
+      <div class="row">
+        <button class="ghost" id="lunch">Lunch</button>
+        <button class="ghost" id="brk">Break</button>
+      </div>
+      <p class="list" id="punches"></p>
+    </section>
+
+    <section class="card" id="pto" hidden>
+      <h2>Request PTO</h2>
+      <label>Days</label>
+      <input id="ptoDays" type="number" min="0.5" step="0.5" value="1" />
+      <label>When</label>
+      <input id="ptoWhen" type="date" />
+      <label>Note</label>
+      <textarea id="ptoNote" placeholder="Why / coverage"></textarea>
+      <button class="go" id="ptoGo">Send request</button>
+      <p class="list" id="ptoList"></p>
+    </section>
+
+    <section class="card" id="box" hidden>
+      <h2>Suggestion box</h2>
+      <p class="list">Wish it would — or wish it would not. Goes to The Loom. We’ll weave that in.</p>
+      <label>Kind</label>
+      <select id="kind">
+        <option value="wish">Wish it would</option>
+        <option value="stop">Wish it would not</option>
+      </select>
+      <label>Your name (optional)</label>
+      <input id="who" placeholder="Can be blank" />
+      <label>Idea</label>
+      <textarea id="idea" placeholder="Keep it one thought."></textarea>
+      <button class="go" id="sendIdea">Drop in the box</button>
+      <p class="ok" id="ideaOk" hidden>Woven into the loom.</p>
+      <p class="list" id="ideaList"></p>
+    </section>
+  </main>
+  <script>
+    const K = {
+      punches: 'weave.punches',
+      pto: 'weave.pto',
+      ideas: 'weave.ideas',
+      clocked: 'weave.clocked',
+      name: 'weave.name'
+    };
+    const $ = (id) => document.getElementById(id);
+    const load = (k) => JSON.parse(localStorage.getItem(k) || '[]');
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+    $('name').value = localStorage.getItem(K.name) || '';
+    $('name').onchange = () => localStorage.setItem(K.name, $('name').value.trim());
+
+    function renderPunches() {
+      const on = localStorage.getItem(K.clocked) === '1';
+      $('clockTitle').textContent = on ? 'On the clock' : 'Off the clock';
+      const rows = load(K.punches).slice(-12).reverse();
+      $('punches').textContent = rows.map(p => p.at + '  ' + p.kind + (p.name ? '  · ' + p.name : '')).join('\n') || 'No punches yet.';
+    }
+    function punch(kind) {
+      const name = $('name').value.trim();
+      const rows = load(K.punches);
+      rows.push({ kind, name, at: new Date().toLocaleString() });
+      save(K.punches, rows);
+      if (kind === 'clock_in') localStorage.setItem(K.clocked, '1');
+      if (kind === 'clock_out') localStorage.setItem(K.clocked, '0');
+      renderPunches();
+    }
+    $('in').onclick = () => punch('clock_in');
+    $('out').onclick = () => punch('clock_out');
+    $('lunch').onclick = () => punch('lunch');
+    $('brk').onclick = () => punch('break');
+
+    function renderPto() {
+      const rows = load(K.pto).slice(-10).reverse();
+      $('ptoList').textContent = rows.map(p => p.when + '  ' + p.days + 'd  ' + (p.note || '')).join('\n') || 'No PTO requests.';
+    }
+    $('ptoGo').onclick = () => {
+      const rows = load(K.pto);
+      rows.push({ name: $('name').value.trim(), days: $('ptoDays').value, when: $('ptoWhen').value, note: $('ptoNote').value.trim(), at: new Date().toISOString() });
+      save(K.pto, rows);
+      $('ptoNote').value = '';
+      renderPto();
+    };
+
+    function renderIdeas() {
+      const rows = load(K.ideas).slice(-15).reverse();
+      $('ideaList').textContent = rows.map(p => (p.kind === 'stop' ? 'NOT: ' : 'WISH: ') + p.text + (p.who ? ' — ' + p.who : '')).join('\n') || 'Box is empty.';
+    }
+    $('sendIdea').onclick = () => {
+      const text = $('idea').value.trim();
+      if (!text) return;
+      const rows = load(K.ideas);
+      rows.push({ kind: $('kind').value, text, who: $('who').value.trim() || $('name').value.trim(), at: new Date().toISOString() });
+      save(K.ideas, rows);
+      $('idea').value = '';
+      $('ideaOk').hidden = false;
+      renderIdeas();
+    };
+
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('nav button').forEach(b => { b.className = 'ghost'; });
+        btn.className = 'navy';
+        ['clock','pto','box'].forEach(id => $(id).hidden = btn.dataset.tab !== id);
+      };
+    });
+
+    renderPunches(); renderPto(); renderIdeas();
+  </script>
+</body>
+</html>
