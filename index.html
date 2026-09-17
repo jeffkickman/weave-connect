@@ -3,12 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Weave Connect — Become Woven</title>
-  <meta name="description" content="Weave Connect helps people share what they offer and what they need so lives become interwoven. Stronger together. Safer together.">
+  <title>Weave Connect — Harvest</title>
+  <meta name="description" content="When something helps one person, Weave checks who else in the network it can help. Agent of record always owns the member thread.">
   <meta name="theme-color" content="#7c5cff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Weave">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    :root {
+      --violet: #7c5cff;
+      --navy: #16122a;
+      --paper: #f6f2ea;
+      --ink: #1a1625;
+      --muted: #6b6578;
+      --card: #fff;
+      --fit: #1b6b3a;
+      --maybe: #8a5a12;
+      --line: #e6e0d4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    header {
+      background: linear-gradient(160deg, #16122a, #3a2a72 70%);
+      color: #fff;
+      padding: 1.15rem 1.1rem 1.35rem;
+    }
+    header em { font-style: normal; letter-spacing: .16em; font-size: .72rem; color: #cbb8ff; }
+    header h1 { margin: .35rem 0 0; font-size: 1.35rem; }
+    header p { margin: .4rem 0 0; color: #d7d0e8; font-size: .92rem; max-width: 36rem; }
+    main { padding: 1rem; max-width: 720px; margin: 0 auto; }
+    nav { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    nav button {
+      border: 1px solid #cfc8bb; background: transparent; color: var(--navy);
+      border-radius: 999px; padding: .45rem .8rem; font-weight: 650;
+    }
+    nav button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 1rem 1.05rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 0 rgba(22,18,42,.06);
+    }
+    h2 { margin: .1rem 0 .55rem; font-size: 1.05rem; }
+    .muted { color: var(--muted); font-size: .88rem; line-height: 1.45; }
+    label { display: block; font-size: .75rem; color: var(--muted); margin: .55rem 0 .2rem; }
+    input, select, textarea {
+      width: 100%; padding: .65rem .7rem; border: 1px solid #d7d1c6;
+      border-radius: 8px; font: inherit; background: #fff;
+    }
+    textarea { min-height: 70px; }
+    button.go {
+      width: 100%; margin-top: .7rem; padding: .8rem; border: 0; border-radius: 10px;
+      background: var(--violet); color: #fff; font-weight: 750; font-size: 1rem;
+    }
+    .thread {
+      border-top: 1px solid var(--line);
+      padding: .75rem 0 0;
+      margin-top: .75rem;
+    }
+    .thread:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+    .badge {
+      display: inline-block; font-size: .7rem; font-weight: 750; letter-spacing: .04em;
+      padding: .15rem .45rem; border-radius: 999px; text-transform: uppercase;
+    }
+    .fit { background: #d7f3e2; color: var(--fit); }
+    .maybe { background: #f8e6c4; color: var(--maybe); }
+    .who { font-weight: 700; margin: .25rem 0 .1rem; }
+    .why { font-size: .88rem; color: var(--muted); }
+    .route { font-size: .84rem; margin-top: .3rem; }
+    ul.plain { margin: .3rem 0 0; padding-left: 1.1rem; color: var(--muted); font-size: .9rem; }
+    footer { text-align: center; color: var(--muted); font-size: .78rem; padding: .5rem 1rem 1.4rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <em>WEAVE CONNECT</em>
+    <h1>Harvest</h1>
+    <p>When something helps one person, check the cloth. Member help always goes through the agent of record.</p>
+  </header>
+  <main>
+    <nav>
+      <button class="on" data-tab="threads">Threads</button>
+      <button data-tab="resources">Resources</button>
+      <button data-tab="cloth">Cloth</button>
+      <button data-tab="weavein">Weave in</button>
+    </nav>
+    <section class="card" id="threads">
+      <h2>This week’s harvest</h2>
+      <p class="muted">Synthetic book only. Live book stays inside Weave CRM. Harvest never calls the member.</p>
+      <div id="threadList"></div>
+      <button class="go" id="runHarvest">Run harvest</button>
+    </section>
+    <section class="card" id="resources" hidden>
+      <h2>Woven resources</h2>
+      <div id="resList"></div>
+    </section>
+    <section class="card" id="cloth" hidden>
+      <h2>Who is already woven</h2>
+      <p class="muted">Members, agents, companies. Same scan. Different route.</p>
+      <div id="clothList"></div>
+    </section>
+    <section class="card" id="weavein" hidden>
+      <h2>Weave a resource in</h2>
+      <label>Name</label>
+      <input id="rName" placeholder="Covington senior housekeeping" />
+      <label>Helps</label>
+      <select id="rHelps">
+        <option value="member">Members (AOR route)</option>
+        <option value="agent">Agents</option>
+        <option value="company">Companies</option>
+      </select>
+      <label>Need tag</label>
+      <input id="rTag" placeholder="housekeeping" />
+      <label>County</label>
+      <input id="rCounty" value="Covington" />
+      <label>Min age (members)</label>
+      <input id="rAge" type="number" value="65" />
+      <label>Must also have (optional)</label>
+      <select id="rNeed">
+        <option value="">None</option>
+        <option value="dual">Dual / Medicaid</option>
+        <option value="lis">LIS</option>
+        <option value="alone">Lives alone</option>
+        <option value="lifehealth">Life + Health license</option>
+        <option value="no-ltc">Missing LTC certificate</option>
+      </select>
+      <label>What they give</label>
+      <textarea id="rOffer" placeholder="Free light housekeeping if they meet the rules."></textarea>
+      <button class="go" id="addRes">Weave it in and harvest</button>
+    </section>
+  </main>
+  <footer>Woven in. Nothing slips. · Weave it once. Use it twice.</footer>
+  <script>
+    const RESOURCES = [
+      { id: 'ex-clean', name: 'EXAMPLE · Covington senior housekeeping', kind: 'program', helps: ['member'], tags: ['housekeeping', 'aging-in-place'], county: 'Covington', minAge: 65, require: ['dual_or_lis'], offer: 'Free light housekeeping for eligible seniors who live independently.' },
+      { id: 'ex-meals', name: 'EXAMPLE · County senior meals', kind: 'program', helps: ['member'], tags: ['meals'], county: 'Covington', minAge: 60, require: [], offer: 'Weekday meals at the senior center or home delivery if homebound.' },
+      { id: 'ex-ltc', name: 'AL 8-hour LTC initial course', kind: 'class', helps: ['agent'], tags: ['ltc-ce'], county: 'Alabama', minAge: 0, require: ['lifehealth', 'no-ltc'], offer: 'Required 8-hour AL LTC course before hybrid / traditional LTC sales.' }
+    ];
+    const MEMBERS = [
+      { name: 'Dorothy Hale', age: 78, county: 'Covington', city: 'Andalusia', dual: true, lis: false, alone: true, aor: 'Beverly Prestwood' },
+      { name: 'James Pike', age: 71, county: 'Covington', city: 'Opp', dual: false, lis: true, alone: false, aor: 'Jeff Watson' },
+      { name: 'Rita Cole', age: 84, county: 'Covington', city: 'Florala', dual: false, lis: false, alone: true, aor: 'Matthew' },
+      { name: 'Carl Nunez', age: 67, county: 'Mobile', city: 'Mobile', dual: true, lis: false, alone: true, aor: 'Jeff Watson' }
+    ];
+    const AGENTS = [
+      { name: 'Matthew', lifehealth: true, ltc: false },
+      { name: 'Beverly Prestwood', lifehealth: true, ltc: true },
+      { name: 'New Life Agent', lifehealth: true, ltc: false }
+    ];
+    const COMPANIES = [
+      { name: 'River Falls Rehab Partners', county: 'Covington', needs: ['housekeeping'], contact: 'Office manager' },
+      { name: 'Three Notch Benefits', county: 'Covington', needs: ['recruiting'], contact: 'Jeff' }
+    ];
+    const $ = (id) => document.getElementById(id);
+    const storeKey = 'weave.harvest.resources';
+    function allResources() {
+      return RESOURCES.concat(JSON.parse(localStorage.getItem(storeKey) || '[]'));
+    }
+    function scoreMember(res, m) {
+      if (!res.helps.includes('member')) return null;
+      if (res.county && res.county !== 'Alabama' && m.county !== res.county) return { score: 'out' };
+      if (res.minAge && m.age < res.minAge) return { score: 'out' };
+      const req = res.require || [];
+      let fail = false;
+      req.forEach(r => {
+        if (r === 'dual_or_lis' && !(m.dual || m.lis)) fail = true;
+        else if (r === 'dual' && !m.dual) fail = true;
+        else if (r === 'lis' && !m.lis) fail = true;
+        else if (r === 'alone' && !m.alone) fail = true;
+      });
+      if (fail) return { score: 'out' };
+      const bits = [m.age + ' yrs', m.city, m.dual ? 'dual' : (m.lis ? 'LIS' : null), m.alone ? 'lives alone' : null].filter(Boolean);
+      return { score: 'fit', why: bits.join(' · ') };
+    }
+    function scoreAgent(res, a) {
+      if (!res.helps.includes('agent')) return null;
+      const req = res.require || [];
+      if (req.includes('lifehealth') && !a.lifehealth) return { score: 'out' };
+      if (req.includes('no-ltc') && a.ltc) return { score: 'out' };
+      return { score: 'fit', why: (a.lifehealth ? 'Life+Health' : 'agent') + (a.ltc ? ' · LTC on file' : ' · no LTC cert') };
+    }
+    function scoreCompany(res, c) {
+      const hit = (res.tags || []).some(t => (c.needs || []).includes(t));
+      if (!res.helps.includes('company') && !hit) return null;
+      if (res.county && res.county !== 'Alabama' && c.county !== res.county) return { score: 'out' };
+      return { score: 'fit', why: 'Needs: ' + (c.needs || []).join(', ') };
+    }
+    function harvest() {
+      const threads = [];
+      allResources().forEach(res => {
+        MEMBERS.forEach(m => {
+          const s = scoreMember(res, m);
+          if (s && s.score !== 'out') threads.push({ entity: m.name, kind: 'member', resource: res.name, score: s.score, why: s.why, route: 'AOR ' + m.aor + ' reaches out. Harvest does not call the member.' });
+        });
+        AGENTS.forEach(a => {
+          const s = scoreAgent(res, a);
+          if (s && s.score !== 'out') threads.push({ entity: a.name, kind: 'agent', resource: res.name, score: s.score, why: s.why, route: 'Tell the agent. Jeff also sees this harvest row on The Loom.' });
+        });
+        COMPANIES.forEach(c => {
+          const s = scoreCompany(res, c);
+          if (s && s.score !== 'out') threads.push({ entity: c.name, kind: 'company', resource: res.name, score: s.score, why: s.why, route: 'Company contact: ' + c.contact });
+        });
+      });
+      return threads;
+    }
+    function renderThreads() {
+      const rows = harvest();
+      $('threadList').innerHTML = rows.length ? rows.map(t => '<div class="thread"><span class="badge ' + t.score + '">' + t.score + '</span> <span class="badge">' + t.kind + '</span><div class="who">' + t.entity + '</div><div class="why">' + t.resource + '<br>' + t.why + '</div><div class="route">' + t.route + '</div></div>').join('') : '<p class="muted">No loose threads.</p>';
+    }
+    function renderResources() {
+      $('resList').innerHTML = allResources().map(r => '<div class="thread"><div class="who">' + r.name + '</div><div class="why">Helps ' + r.helps.join(', ') + ' · ' + (r.tags || []).join(', ') + '<br>' + (r.offer || '') + '</div></div>').join('');
+    }
+    function renderCloth() {
+      const blocks = [
+        ['Members (synthetic)', MEMBERS.map(m => m.name + ' · ' + m.age + ' · ' + m.county + ' · AOR ' + m.aor)],
+        ['Agents', AGENTS.map(a => a.name + ' · ' + (a.ltc ? 'LTC' : 'no LTC'))],
+        ['Companies', COMPANIES.map(c => c.name + ' · needs ' + c.needs.join(', '))]
+      ];
+      $('clothList').innerHTML = blocks.map(b => '<div class="thread"><div class="who">' + b[0] + '</div><ul class="plain">' + b[1].map(x => '<li>' + x + '</li>').join('') + '</ul></div>').join('');
+    }
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        ['threads', 'resources', 'cloth', 'weavein'].forEach(id => $(id).hidden = btn.dataset.tab !== id);
+      };
+    });
+    $('runHarvest').onclick = renderThreads;
+    $('addRes').onclick = () => {
+      const name = $('rName').value.trim();
+      if (!name) return;
+      const extra = JSON.parse(localStorage.getItem(storeKey) || '[]');
+      extra.push({ id: 'local-' + Date.now(), name, helps: [$('rHelps').value], tags: [$('rTag').value.trim() || 'general'], county: $('rCounty').value.trim() || 'Covington', minAge: Number($('rAge').value || 0), require: $('rNeed').value ? [$('rNeed').value] : [], offer: $('rOffer').value.trim() });
+      localStorage.setItem(storeKey, JSON.stringify(extra));
+      $('rName').value = '';
+      $('rOffer').value = '';
+      renderResources();
+      renderThreads();
+      document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'threads'));
+      ['threads', 'resources', 'cloth', 'weavein'].forEach(id => $(id).hidden = id !== 'threads');
+    };
+    renderThreads();
+    renderResources();
+    renderCloth();
+  </script>
+</body>
+</html>
