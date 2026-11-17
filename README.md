@@ -15,7 +15,16 @@ Open that link on any phone. Add to Home Screen:
 - iPhone: Share → Add to Home Screen
 - Android: menu → Add to Home screen / Install app
 
-Staff clock / PTO / suggestion box: `staff.html` (local until Time API is wired).
+## Weave Time staff clock (`staff.html`)
+
+**https://jeffkickman.github.io/weave-connect/staff.html** — add it to the Home Screen as its own app ("Weave Time").
+
+- Clock In/Out, Lunch Start/End, Break Start/End; the button always shows the next allowed punch.
+- Lunch is unpaid, breaks are paid (constants `LUNCH_PAID` / `BREAK_PAID` at the top of `staff-core.js`).
+- GPS on every punch; onsite = within 250 m of 1510 E Three Notch St, Andalusia. Offsite or no location requires a note.
+- Weeks are Sun–Sat, America/Chicago. Export CSV / JSON (`weave-time-weekly/v1`) or share a text summary.
+- Data lives only in each phone's localStorage until the Weave Time server (weave-route) is live. Not a real login.
+- Icons are generated at deploy time by `tools/make-icons.py`. Logic tests: `node tools/test-staff-core.js`.
 
 ## What it does
 - Weave a resource in (program, class, company, need)
