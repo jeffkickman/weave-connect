@@ -1,0 +1,17 @@
+{
+  "name": "Weave Time",
+  "short_name": "Weave Time",
+  "description": "Weave Time staff clock: clock in/out, lunch and breaks, weekly hours.",
+  "id": "./staff.html",
+  "start_url": "./staff.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4EFE6",
+  "theme_color": "#0B1F3A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
