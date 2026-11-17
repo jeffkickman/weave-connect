@@ -3,162 +3,218 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Weave Time — Staff</title>
+  <title>Weave Time — Staff Clock</title>
   <meta name="theme-color" content="#0B1F3A">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Weave Time">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
   <style>
-    :root { --navy:#0B1F3A; --gold:#C4A35A; --paper:#F4EFE6; --ink:#1a1a1a; --muted:#5c6570; }
+    :root { --navy:#0B1F3A; --gold:#C4A35A; --paper:#F4EFE6; --ink:#1a1a1a; --muted:#5c6570; --ok:#1b5e20; }
     * { box-sizing:border-box; }
-    body { margin:0; font-family: system-ui, sans-serif; background:var(--paper); color:var(--ink); }
+    body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--paper); color:var(--ink); }
     header { background:var(--navy); color:#fff; padding:1rem 1.1rem 1.2rem; }
     header strong { letter-spacing:.12em; font-size:.78rem; }
     header p { margin:.35rem 0 0; color:#c9d2dc; font-size:.9rem; }
-    main { padding:1rem; max-width:440px; margin:0 auto; }
+    main { padding:1rem; max-width:480px; margin:0 auto; }
     .card { background:#fff; border-radius:14px; padding:1rem; margin-bottom:1rem; box-shadow:0 1px 0 rgba(11,31,58,.08); }
     h2 { margin:.1rem 0 .7rem; font-size:1.05rem; }
     label { display:block; font-size:.78rem; color:var(--muted); margin:.55rem 0 .2rem; }
-    input, textarea, select { width:100%; padding:.65rem .7rem; border:1px solid #d7d1c6; border-radius:8px; font:inherit; }
-    textarea { min-height:90px; }
-    button { width:100%; margin-top:.55rem; padding:.8rem; border:0; border-radius:10px; font-weight:700; font-size:1rem; }
+    input, select { width:100%; padding:.65rem .7rem; border:1px solid #d7d1c6; border-radius:8px; font:inherit; }
+    button { width:100%; margin-top:.55rem; padding:.8rem; border:0; border-radius:10px; font-weight:700; font-size:1rem; cursor:pointer; }
     .go { background:var(--gold); color:var(--navy); }
     .navy { background:var(--navy); color:#fff; }
     .ghost { background:transparent; color:var(--navy); border:1px solid #cfc8bb; }
     .row { display:flex; gap:.5rem; }
     .row button { flex:1; }
-    .ok { color:#1b5e20; font-size:.88rem; }
-    .list { font-size:.88rem; color:var(--muted); white-space:pre-wrap; }
-    nav { display:flex; gap:.4rem; margin-bottom:1rem; }
-    nav button { margin:0; padding:.55rem; font-size:.85rem; }
+    .ok { color:var(--ok); font-size:.88rem; }
+    .list { font-size:.85rem; color:var(--muted); white-space:pre-wrap; max-height:180px; overflow:auto; }
+    .hours { font-size:1.4rem; font-weight:700; color:var(--navy); }
+    nav { display:flex; gap:.4rem; margin-bottom:1rem; flex-wrap:wrap; }
+    nav button { margin:0; padding:.55rem .7rem; font-size:.85rem; width:auto; }
+    .week { border-bottom:1px solid #eee; padding:.4rem 0; }
   </style>
 </head>
 <body>
   <header>
     <strong>WEAVE TIME</strong>
-    <p>Ask Weave. Clock, PTO, suggestion box.</p>
+    <p>Clock in / out · Your hours · History</p>
   </header>
   <main>
-    <nav>
-      <button class="navy" data-tab="clock">Clock</button>
-      <button class="ghost" data-tab="pto">PTO</button>
-      <button class="ghost" data-tab="box">Box</button>
-    </nav>
-
-    <section class="card" id="clock">
-      <h2 id="clockTitle">Off the clock</h2>
+    <section class="card" id="login" hidden>
+      <h2>Sign in</h2>
       <label>Your name</label>
-      <input id="name" placeholder="First and last" />
-      <div class="row">
-        <button class="go" id="in">Clock in</button>
-        <button class="navy" id="out">Clock out</button>
-      </div>
-      <div class="row">
-        <button class="ghost" id="lunch">Lunch</button>
-        <button class="ghost" id="brk">Break</button>
-      </div>
-      <p class="list" id="punches"></p>
+      <input id="loginName" placeholder="First Last" />
+      <label>PIN (4 digits, just for this device)</label>
+      <input id="loginPin" type="password" inputmode="numeric" maxlength="4" placeholder="1234" />
+      <button class="go" id="btnLogin">Sign in / Create</button>
+      <p class="muted">Data stays on this phone. Export weekly summary to share with Jeff.</p>
     </section>
 
-    <section class="card" id="pto" hidden>
-      <h2>Request PTO</h2>
-      <label>Days</label>
-      <input id="ptoDays" type="number" min="0.5" step="0.5" value="1" />
-      <label>When</label>
-      <input id="ptoWhen" type="date" />
-      <label>Note</label>
-      <textarea id="ptoNote" placeholder="Why / coverage"></textarea>
-      <button class="go" id="ptoGo">Send request</button>
-      <p class="list" id="ptoList"></p>
-    </section>
+    <div id="app" hidden>
+      <nav>
+        <button class="navy" data-tab="clock">Clock</button>
+        <button class="ghost" data-tab="hours">Hours</button>
+        <button class="ghost" data-tab="history">History</button>
+      </nav>
 
-    <section class="card" id="box" hidden>
-      <h2>Suggestion box</h2>
-      <p class="list">Wish it would — or wish it would not. Goes to The Loom. We’ll weave that in.</p>
-      <label>Kind</label>
-      <select id="kind">
-        <option value="wish">Wish it would</option>
-        <option value="stop">Wish it would not</option>
-      </select>
-      <label>Your name (optional)</label>
-      <input id="who" placeholder="Can be blank" />
-      <label>Idea</label>
-      <textarea id="idea" placeholder="Keep it one thought."></textarea>
-      <button class="go" id="sendIdea">Drop in the box</button>
-      <p class="ok" id="ideaOk" hidden>Woven into the loom.</p>
-      <p class="list" id="ideaList"></p>
-    </section>
+      <section class="card" id="clock">
+        <h2 id="clockTitle">Off the clock</h2>
+        <p id="currentName"></p>
+        <div class="row">
+          <button class="go" id="in">Clock in</button>
+          <button class="navy" id="out">Clock out</button>
+        </div>
+        <div class="row">
+          <button class="ghost" id="lunch">Lunch</button>
+          <button class="ghost" id="brk">Break</button>
+        </div>
+        <p class="list" id="recent"></p>
+      </section>
+
+      <section class="card" id="hours" hidden>
+        <h2>Current week hours</h2>
+        <div class="hours" id="weekHours">0.00 h</div>
+        <p class="muted" id="weekRange"></p>
+        <button class="ghost" id="export">Copy weekly summary</button>
+        <p class="ok" id="exportOk" hidden>Copied. Send to Jeff or paste in chat.</p>
+        <h3>Past weeks</h3>
+        <div id="pastWeeks"></div>
+      </section>
+
+      <section class="card" id="history" hidden>
+        <h2>Punch history</h2>
+        <div class="list" id="fullHist"></div>
+      </section>
+    </div>
   </main>
   <script>
-    const K = {
-      punches: 'weave.punches',
-      pto: 'weave.pto',
-      ideas: 'weave.ideas',
-      clocked: 'weave.clocked',
-      name: 'weave.name'
-    };
+    const KEY = 'weave.time.v2';
     const $ = (id) => document.getElementById(id);
-    const load = (k) => JSON.parse(localStorage.getItem(k) || '[]');
-    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    function load() { return JSON.parse(localStorage.getItem(KEY) || '{"users":{}}'); }
+    function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+    function nowISO() { return new Date().toISOString(); }
+    function fmt(d) { return new Date(d).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }
 
-    $('name').value = localStorage.getItem(K.name) || '';
-    $('name').onchange = () => localStorage.setItem(K.name, $('name').value.trim());
+    function getWeekStart(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day;
+      const start = new Date(date.setDate(diff));
+      start.setHours(0,0,0,0);
+      return start;
+    }
+    function weekKey(d) { return getWeekStart(d).toISOString().slice(0,10); }
+    function calcHours(punches) {
+      let total = 0;
+      let inTime = null;
+      punches.sort((a,b) => new Date(a.at) - new Date(b.at)).forEach(p => {
+        if (p.kind === 'clock_in') inTime = new Date(p.at);
+        else if (p.kind === 'clock_out' && inTime) {
+          total += (new Date(p.at) - inTime) / 3600000;
+          inTime = null;
+        }
+      });
+      if (inTime) total += (Date.now() - inTime) / 3600000;
+      return Math.round(total * 100) / 100;
+    }
 
-    function renderPunches() {
-      const on = localStorage.getItem(K.clocked) === '1';
+    let currentUser = null;
+
+    function render() {
+      if (!currentUser) {
+        $('login').hidden = false;
+        $('app').hidden = true;
+        return;
+      }
+      $('login').hidden = true;
+      $('app').hidden = false;
+      $('currentName').textContent = currentUser.name;
+      const on = currentUser.punches.some(p => p.kind === 'clock_in' && !currentUser.punches.find(q => q.kind === 'clock_out' && new Date(q.at) > new Date(p.at)));
       $('clockTitle').textContent = on ? 'On the clock' : 'Off the clock';
-      const rows = load(K.punches).slice(-12).reverse();
-      $('punches').textContent = rows.map(p => p.at + '  ' + p.kind + (p.name ? '  · ' + p.name : '')).join('\n') || 'No punches yet.';
+      const recent = currentUser.punches.slice(-8).reverse();
+      $('recent').textContent = recent.map(p => fmt(p.at) + '  ' + p.kind.replace('_',' ')).join('\n') || 'No punches yet.';
+
+      const thisWeek = weekKey(new Date());
+      const thisPunches = currentUser.punches.filter(p => weekKey(p.at) === thisWeek);
+      const hrs = calcHours(thisPunches);
+      $('weekHours').textContent = hrs.toFixed(2) + ' h';
+      const start = getWeekStart(new Date());
+      const end = new Date(start); end.setDate(end.getDate()+6);
+      $('weekRange').textContent = start.toLocaleDateString() + ' – ' + end.toLocaleDateString();
+
+      const weeks = {};
+      currentUser.punches.forEach(p => {
+        const k = weekKey(p.at);
+        if (!weeks[k]) weeks[k] = [];
+        weeks[k].push(p);
+      });
+      const keys = Object.keys(weeks).sort().reverse().slice(0,12);
+      $('pastWeeks').innerHTML = keys.map(k => {
+        const h = calcHours(weeks[k]);
+        const d = new Date(k);
+        return `<div class="week">${d.toLocaleDateString()} week: <b>${h.toFixed(2)} h</b></div>`;
+      }).join('') || '<p class="muted">No past weeks yet.</p>';
+
+      $('fullHist').textContent = currentUser.punches.slice().reverse().map(p => fmt(p.at) + '  ' + p.kind.replace('_',' ')).join('\n') || 'Empty.';
     }
+
     function punch(kind) {
-      const name = $('name').value.trim();
-      const rows = load(K.punches);
-      rows.push({ kind, name, at: new Date().toLocaleString() });
-      save(K.punches, rows);
-      if (kind === 'clock_in') localStorage.setItem(K.clocked, '1');
-      if (kind === 'clock_out') localStorage.setItem(K.clocked, '0');
-      renderPunches();
+      if (!currentUser) return;
+      currentUser.punches.push({ id: uid(), kind, at: nowISO() });
+      const data = load();
+      data.users[currentUser.id] = currentUser;
+      save(data);
+      render();
     }
+
+    $('btnLogin').onclick = () => {
+      const name = $('loginName').value.trim();
+      const pin = $('loginPin').value.trim();
+      if (!name || pin.length < 4) return alert('Name and 4-digit PIN required');
+      const data = load();
+      let user = Object.values(data.users).find(u => u.name.toLowerCase() === name.toLowerCase() && u.pin === pin);
+      if (!user) {
+        user = { id: uid(), name, pin, punches: [] };
+        data.users[user.id] = user;
+        save(data);
+      }
+      currentUser = user;
+      localStorage.setItem('weave.current', user.id);
+      render();
+    };
+
+    const savedId = localStorage.getItem('weave.current');
+    if (savedId) {
+      const data = load();
+      if (data.users[savedId]) currentUser = data.users[savedId];
+    }
+    render();
+
     $('in').onclick = () => punch('clock_in');
     $('out').onclick = () => punch('clock_out');
     $('lunch').onclick = () => punch('lunch');
     $('brk').onclick = () => punch('break');
 
-    function renderPto() {
-      const rows = load(K.pto).slice(-10).reverse();
-      $('ptoList').textContent = rows.map(p => p.when + '  ' + p.days + 'd  ' + (p.note || '')).join('\n') || 'No PTO requests.';
-    }
-    $('ptoGo').onclick = () => {
-      const rows = load(K.pto);
-      rows.push({ name: $('name').value.trim(), days: $('ptoDays').value, when: $('ptoWhen').value, note: $('ptoNote').value.trim(), at: new Date().toISOString() });
-      save(K.pto, rows);
-      $('ptoNote').value = '';
-      renderPto();
-    };
-
-    function renderIdeas() {
-      const rows = load(K.ideas).slice(-15).reverse();
-      $('ideaList').textContent = rows.map(p => (p.kind === 'stop' ? 'NOT: ' : 'WISH: ') + p.text + (p.who ? ' — ' + p.who : '')).join('\n') || 'Box is empty.';
-    }
-    $('sendIdea').onclick = () => {
-      const text = $('idea').value.trim();
-      if (!text) return;
-      const rows = load(K.ideas);
-      rows.push({ kind: $('kind').value, text, who: $('who').value.trim() || $('name').value.trim(), at: new Date().toISOString() });
-      save(K.ideas, rows);
-      $('idea').value = '';
-      $('ideaOk').hidden = false;
-      renderIdeas();
+    $('export').onclick = () => {
+      if (!currentUser) return;
+      const thisWeek = weekKey(new Date());
+      const punches = currentUser.punches.filter(p => weekKey(p.at) === thisWeek);
+      const hrs = calcHours(punches);
+      const lines = punches.map(p => fmt(p.at) + ' ' + p.kind).join('\n');
+      const text = `${currentUser.name}\nWeek of ${$('weekRange').textContent}\nTotal: ${hrs.toFixed(2)} hours\n\n${lines || 'No punches'}`;
+      navigator.clipboard.writeText(text).then(() => { $('exportOk').hidden = false; setTimeout(() => $('exportOk').hidden = true, 3000); });
     };
 
     document.querySelectorAll('nav button').forEach(btn => {
       btn.onclick = () => {
-        document.querySelectorAll('nav button').forEach(b => { b.className = 'ghost'; });
+        document.querySelectorAll('nav button').forEach(b => b.className = 'ghost');
         btn.className = 'navy';
-        ['clock','pto','box'].forEach(id => $(id).hidden = btn.dataset.tab !== id);
+        ['clock','hours','history'].forEach(id => $(id).hidden = btn.dataset.tab !== id);
       };
     });
-
-    renderPunches(); renderPto(); renderIdeas();
   </script>
 </body>
 </html>
