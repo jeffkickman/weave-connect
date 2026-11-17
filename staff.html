@@ -6,215 +6,118 @@
   <title>Weave Time — Staff Clock</title>
   <meta name="theme-color" content="#0B1F3A">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Weave Time">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="staff.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <style>
-    :root { --navy:#0B1F3A; --gold:#C4A35A; --paper:#F4EFE6; --ink:#1a1a1a; --muted:#5c6570; --ok:#1b5e20; }
+    :root { --navy:#0B1F3A; --gold:#C4A35A; --paper:#F4EFE6; --ink:#1a1a1a; --muted:#5c6570; --ok:#1b5e20; --bad:#a32020; }
     * { box-sizing:border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--paper); color:var(--ink); }
-    header { background:var(--navy); color:#fff; padding:1rem 1.1rem 1.2rem; }
-    header strong { letter-spacing:.12em; font-size:.78rem; }
-    header p { margin:.35rem 0 0; color:#c9d2dc; font-size:.9rem; }
-    main { padding:1rem; max-width:480px; margin:0 auto; }
+    body { margin:0; font-family:system-ui,-apple-system,sans-serif; background:var(--paper); color:var(--ink); }
+    header { background:var(--navy); color:#fff; padding:calc(env(safe-area-inset-top) + .9rem) 1.1rem 1rem; }
+    header strong { letter-spacing:.12em; font-size:.8rem; }
+    header p { margin:.3rem 0 0; color:#c9d2dc; font-size:.88rem; }
+    main { padding:1rem; max-width:520px; margin:0 auto; padding-bottom:3rem; }
     .card { background:#fff; border-radius:14px; padding:1rem; margin-bottom:1rem; box-shadow:0 1px 0 rgba(11,31,58,.08); }
-    h2 { margin:.1rem 0 .7rem; font-size:1.05rem; }
-    label { display:block; font-size:.78rem; color:var(--muted); margin:.55rem 0 .2rem; }
-    input, select { width:100%; padding:.65rem .7rem; border:1px solid #d7d1c6; border-radius:8px; font:inherit; }
-    button { width:100%; margin-top:.55rem; padding:.8rem; border:0; border-radius:10px; font-weight:700; font-size:1rem; cursor:pointer; }
+    h2 { margin:.1rem 0 .6rem; font-size:1.05rem; }
+    label { display:block; font-size:.8rem; color:var(--muted); margin:.6rem 0 .2rem; }
+    input, textarea { width:100%; padding:.75rem; border:1px solid #d7d1c6; border-radius:10px; font:inherit; font-size:1rem; }
+    button { width:100%; margin-top:.55rem; padding:.9rem; border:0; border-radius:12px; font-weight:700; font-size:1.05rem; cursor:pointer; }
+    button:disabled { opacity:.5; }
+    .big { padding:1.3rem; font-size:1.35rem; }
     .go { background:var(--gold); color:var(--navy); }
     .navy { background:var(--navy); color:#fff; }
     .ghost { background:transparent; color:var(--navy); border:1px solid #cfc8bb; }
-    .row { display:flex; gap:.5rem; }
-    .row button { flex:1; }
-    .ok { color:var(--ok); font-size:.88rem; }
-    .list { font-size:.85rem; color:var(--muted); white-space:pre-wrap; max-height:180px; overflow:auto; }
-    .hours { font-size:1.4rem; font-weight:700; color:var(--navy); }
-    nav { display:flex; gap:.4rem; margin-bottom:1rem; flex-wrap:wrap; }
-    nav button { margin:0; padding:.55rem .7rem; font-size:.85rem; width:auto; }
-    .week { border-bottom:1px solid #eee; padding:.4rem 0; }
+    .sm { padding:.55rem; font-size:.9rem; }
+    .row { display:flex; gap:.5rem; } .row button { flex:1; }
+    nav { display:flex; gap:.4rem; margin-bottom:1rem; } nav button { margin:0; padding:.6rem; font-size:.9rem; }
+    .muted { color:var(--muted); font-size:.85rem; }
+    .status { font-size:1.5rem; font-weight:800; margin:.2rem 0; }
+    .s-on { color:var(--ok); } .s-off { color:var(--muted); } .s-lunch, .s-break { color:#8a6d1f; }
+    .hrs { font-size:1.6rem; font-weight:800; color:var(--navy); }
+    ul.pl { list-style:none; padding:0; margin:.4rem 0 0; font-size:.9rem; } ul.pl li { padding:.35rem 0; border-top:1px solid #f0ece4; }
+    .tag { font-size:.72rem; padding:.1rem .4rem; border-radius:6px; font-weight:700; }
+    .tag.on { background:#e3f1e4; color:var(--ok); } .tag.off { background:#f9e3e3; color:var(--bad); }
+    .note { color:var(--muted); font-style:italic; margin-top:.15rem; }
+    .flash { position:sticky; top:.5rem; z-index:5; padding:.8rem; border-radius:10px; font-weight:600; margin-bottom:.8rem; }
+    .flash.good { background:#e3f1e4; color:var(--ok); } .flash.bad { background:#f9e3e3; color:var(--bad); }
+    #notePanel { border:2px solid var(--gold); }
+    details.wk { border-top:1px solid #eee; padding:.5rem 0; } details.wk summary { display:flex; justify-content:space-between; cursor:pointer; font-weight:600; }
+    .day { margin:.6rem 0; padding:.5rem; background:#faf8f3; border-radius:8px; } .dh { display:flex; justify-content:space-between; }
+    #busy { font-weight:600; color:var(--navy); }
   </style>
 </head>
 <body>
   <header>
     <strong>WEAVE TIME</strong>
-    <p>Clock in / out · Your hours · History</p>
+    <p>Clock in / out · Lunch &amp; breaks · Weekly hours</p>
   </header>
   <main>
-    <section class="card" id="login" hidden>
-      <h2>Sign in</h2>
-      <label>Your name</label>
-      <input id="loginName" placeholder="First Last" />
-      <label>PIN (4 digits, just for this device)</label>
-      <input id="loginPin" type="password" inputmode="numeric" maxlength="4" placeholder="1234" />
-      <button class="go" id="btnLogin">Sign in / Create</button>
-      <p class="muted">Data stays on this phone. Export weekly summary to share with Jeff.</p>
+    <div id="flash" class="flash" hidden></div>
+
+    <section class="card" id="who" hidden>
+      <h2>Who is using this phone?</h2>
+      <label for="pName">Your full name</label>
+      <input id="pName" autocomplete="name" placeholder="First Last">
+      <label for="pId">Employee ID (optional)</label>
+      <input id="pId" placeholder="optional">
+      <button class="go" id="saveProfile">Save &amp; start</button>
+      <p class="muted">This is <b>not a real login</b> — just your name on this device. Your punches are saved <b>only on this phone</b>
+        until the Weave Time server is live. Export your week and send it to payroll.</p>
     </section>
 
     <div id="app" hidden>
       <nav>
-        <button class="navy" data-tab="clock">Clock</button>
-        <button class="ghost" data-tab="hours">Hours</button>
-        <button class="ghost" data-tab="history">History</button>
+        <button data-tab="clock">Clock</button>
+        <button data-tab="week">This week</button>
+        <button data-tab="history">History</button>
       </nav>
 
-      <section class="card" id="clock">
-        <h2 id="clockTitle">Off the clock</h2>
-        <p id="currentName"></p>
-        <div class="row">
-          <button class="go" id="in">Clock in</button>
-          <button class="navy" id="out">Clock out</button>
+      <section id="clock">
+        <div class="card">
+          <div class="muted" id="meName"></div>
+          <div class="status" id="status"></div>
+          <div id="actions"></div>
+          <p id="busy" hidden></p>
         </div>
-        <div class="row">
-          <button class="ghost" id="lunch">Lunch</button>
-          <button class="ghost" id="brk">Break</button>
+        <div class="card" id="notePanel" hidden>
+          <h2 id="noteTitle">Note required</h2>
+          <p class="muted" id="noteWhy"></p>
+          <label for="noteText">Why are you punching from here? (1–2 sentences)</label>
+          <textarea id="noteText" rows="3" maxlength="500" placeholder="e.g. Delivering paperwork to a client in Opp"></textarea>
+          <div class="row"><button class="ghost" id="noteCancel">Cancel</button><button class="go" id="noteSave">Save punch</button></div>
         </div>
-        <p class="list" id="recent"></p>
+        <div class="card">
+          <h2>Today <span class="muted" id="todayHrs"></span></h2>
+          <ul class="pl" id="today"></ul>
+        </div>
+        <div class="card">
+          <h2>This week</h2>
+          <div class="hrs" id="wkHrs"></div>
+          <p class="muted" id="wkSub"></p>
+          <p class="muted">Lunch is unpaid (subtracted). Breaks are paid (counted, shown separately). Location is checked on every punch;
+            onsite = within 250 m of the office at 1510 E Three Notch St.</p>
+        </div>
+        <p class="muted">Not a real login — data stays on this phone. <a href="#" id="editProfile">Change name</a></p>
       </section>
 
-      <section class="card" id="hours" hidden>
-        <h2>Current week hours</h2>
-        <div class="hours" id="weekHours">0.00 h</div>
-        <p class="muted" id="weekRange"></p>
-        <button class="ghost" id="export">Copy weekly summary</button>
-        <p class="ok" id="exportOk" hidden>Copied. Send to Jeff or paste in chat.</p>
-        <h3>Past weeks</h3>
-        <div id="pastWeeks"></div>
+      <section class="card" id="week" hidden>
+        <h2>This week (Sun–Sat, Central)</h2>
+        <div id="weekBody"></div>
+        <p class="muted">Send to payroll: <b>CSV</b> or <b>JSON</b> downloads a file (format <code>weave-time-weekly/v1</code>);
+          <b>Share / Copy</b> sends a text summary. Every punch includes time, onsite/offsite, distance, GPS and note.</p>
       </section>
 
       <section class="card" id="history" hidden>
-        <h2>Punch history</h2>
-        <div class="list" id="fullHist"></div>
+        <h2>Past weeks</h2>
+        <p class="muted">Tap a week for the daily breakdown. All history stays on this phone (nothing is deleted).</p>
+        <div id="histBody"></div>
       </section>
     </div>
   </main>
-  <script>
-    const KEY = 'weave.time.v2';
-    const $ = (id) => document.getElementById(id);
-    function load() { return JSON.parse(localStorage.getItem(KEY) || '{"users":{}}'); }
-    function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
-    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-    function nowISO() { return new Date().toISOString(); }
-    function fmt(d) { return new Date(d).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }
-
-    function getWeekStart(d) {
-      const date = new Date(d);
-      const day = date.getDay();
-      const diff = date.getDate() - day;
-      const start = new Date(date.setDate(diff));
-      start.setHours(0,0,0,0);
-      return start;
-    }
-    function weekKey(d) { return getWeekStart(d).toISOString().slice(0,10); }
-    function calcHours(punches) {
-      let total = 0;
-      let inTime = null;
-      punches.sort((a,b) => new Date(a.at) - new Date(b.at)).forEach(p => {
-        if (p.kind === 'clock_in') inTime = new Date(p.at);
-        else if (p.kind === 'clock_out' && inTime) {
-          total += (new Date(p.at) - inTime) / 3600000;
-          inTime = null;
-        }
-      });
-      if (inTime) total += (Date.now() - inTime) / 3600000;
-      return Math.round(total * 100) / 100;
-    }
-
-    let currentUser = null;
-
-    function render() {
-      if (!currentUser) {
-        $('login').hidden = false;
-        $('app').hidden = true;
-        return;
-      }
-      $('login').hidden = true;
-      $('app').hidden = false;
-      $('currentName').textContent = currentUser.name;
-      const on = currentUser.punches.some(p => p.kind === 'clock_in' && !currentUser.punches.find(q => q.kind === 'clock_out' && new Date(q.at) > new Date(p.at)));
-      $('clockTitle').textContent = on ? 'On the clock' : 'Off the clock';
-      const recent = currentUser.punches.slice(-8).reverse();
-      $('recent').textContent = recent.map(p => fmt(p.at) + '  ' + p.kind.replace('_',' ')).join('\n') || 'No punches yet.';
-
-      const thisWeek = weekKey(new Date());
-      const thisPunches = currentUser.punches.filter(p => weekKey(p.at) === thisWeek);
-      const hrs = calcHours(thisPunches);
-      $('weekHours').textContent = hrs.toFixed(2) + ' h';
-      const start = getWeekStart(new Date());
-      const end = new Date(start); end.setDate(end.getDate()+6);
-      $('weekRange').textContent = start.toLocaleDateString() + ' – ' + end.toLocaleDateString();
-
-      const weeks = {};
-      currentUser.punches.forEach(p => {
-        const k = weekKey(p.at);
-        if (!weeks[k]) weeks[k] = [];
-        weeks[k].push(p);
-      });
-      const keys = Object.keys(weeks).sort().reverse().slice(0,12);
-      $('pastWeeks').innerHTML = keys.map(k => {
-        const h = calcHours(weeks[k]);
-        const d = new Date(k);
-        return `<div class="week">${d.toLocaleDateString()} week: <b>${h.toFixed(2)} h</b></div>`;
-      }).join('') || '<p class="muted">No past weeks yet.</p>';
-
-      $('fullHist').textContent = currentUser.punches.slice().reverse().map(p => fmt(p.at) + '  ' + p.kind.replace('_',' ')).join('\n') || 'Empty.';
-    }
-
-    function punch(kind) {
-      if (!currentUser) return;
-      currentUser.punches.push({ id: uid(), kind, at: nowISO() });
-      const data = load();
-      data.users[currentUser.id] = currentUser;
-      save(data);
-      render();
-    }
-
-    $('btnLogin').onclick = () => {
-      const name = $('loginName').value.trim();
-      const pin = $('loginPin').value.trim();
-      if (!name || pin.length < 4) return alert('Name and 4-digit PIN required');
-      const data = load();
-      let user = Object.values(data.users).find(u => u.name.toLowerCase() === name.toLowerCase() && u.pin === pin);
-      if (!user) {
-        user = { id: uid(), name, pin, punches: [] };
-        data.users[user.id] = user;
-        save(data);
-      }
-      currentUser = user;
-      localStorage.setItem('weave.current', user.id);
-      render();
-    };
-
-    const savedId = localStorage.getItem('weave.current');
-    if (savedId) {
-      const data = load();
-      if (data.users[savedId]) currentUser = data.users[savedId];
-    }
-    render();
-
-    $('in').onclick = () => punch('clock_in');
-    $('out').onclick = () => punch('clock_out');
-    $('lunch').onclick = () => punch('lunch');
-    $('brk').onclick = () => punch('break');
-
-    $('export').onclick = () => {
-      if (!currentUser) return;
-      const thisWeek = weekKey(new Date());
-      const punches = currentUser.punches.filter(p => weekKey(p.at) === thisWeek);
-      const hrs = calcHours(punches);
-      const lines = punches.map(p => fmt(p.at) + ' ' + p.kind).join('\n');
-      const text = `${currentUser.name}\nWeek of ${$('weekRange').textContent}\nTotal: ${hrs.toFixed(2)} hours\n\n${lines || 'No punches'}`;
-      navigator.clipboard.writeText(text).then(() => { $('exportOk').hidden = false; setTimeout(() => $('exportOk').hidden = true, 3000); });
-    };
-
-    document.querySelectorAll('nav button').forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll('nav button').forEach(b => b.className = 'ghost');
-        btn.className = 'navy';
-        ['clock','hours','history'].forEach(id => $(id).hidden = btn.dataset.tab !== id);
-      };
-    });
-  </script>
+  <script src="staff-core.js"></script>
+  <script src="staff.js"></script>
 </body>
 </html>
