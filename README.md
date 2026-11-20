@@ -21,9 +21,11 @@ Open that link on any phone. Add to Home Screen:
 
 - Clock In/Out, Lunch Start/End, Break Start/End; the button always shows the next allowed punch.
 - Lunch is unpaid, breaks are paid (constants `LUNCH_PAID` / `BREAK_PAID` at the top of `staff-core.js`).
-- GPS on every punch; onsite = within 250 m of 1510 E Three Notch St, Andalusia. Offsite or no location requires a note.
-- Weeks are Sun–Sat, America/Chicago. Export CSV / JSON (`weave-time-weekly/v1`) or share a text summary.
-- Data lives only in each phone's localStorage until the Weave Time server (weave-route) is live. Not a real login.
+- GPS on every punch (stored centrally, not shown to employees); onsite = within 250 m of 1510 E Three Notch St, Andalusia. Offsite or no location requires a note.
+- Weeks are Sun–Sat, America/Chicago. Weekly hours and 9+ weeks of history are shown on the phone.
+- Invite-only sign in (accounts created by Jeff; temporary password must be changed at first login; Change password / Sign out in the header). No self-registration.
+- "Punch as guest" for someone who can't sign in: name + identifying note; the punch is flagged GUEST for Jeff to verify.
+- Every punch is auto-sent (with retry) to a private Google Sheet via a Google Apps Script web app (`staff-config.js` holds the endpoint URL). Employees see only Onsite / Offsite / Location unavailable.
 - Icons are generated at deploy time by `tools/make-icons.py`. Logic tests: `node tools/test-staff-core.js`.
 
 ## What it does
