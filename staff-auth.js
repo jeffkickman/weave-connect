@@ -68,7 +68,7 @@
     A.api({ action: 'change_password', appKey: S.PUNCH_APP_KEY, sessionToken: A.db().session.token, newPassword: np }).then(function (j) {
       busyBtn(btn, false, 'Save new password');
       if (!j.ok) return err('forceErr', j.error || 'Could not change password.');
-      $('fNew').value = $('fConfirm').value = ''; setSession(j); A.flash('Password set. You can clock in now.'); A.render(); refresh();
+      $('fNew').value = $('fConfirm').value = ''; setSession(j); A.flash(j.employee && j.employee.role === 'admin' ? 'Password set.' : 'Password set. You can clock in now.'); A.render(); refresh();
     }, function (e) { busyBtn(btn, false, 'Save new password'); err('forceErr', netMsg(e)); });
   };
   $('forceSignOut').onclick = function () { signOut(); };

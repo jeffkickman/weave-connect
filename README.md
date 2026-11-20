@@ -26,7 +26,10 @@ Open that link on any phone. Add to Home Screen:
 - Invite-only sign in (accounts created by Jeff; temporary password must be changed at first login; Change password / Sign out in the header). No self-registration.
 - "Punch as guest" for someone who can't sign in: name + identifying note; the punch is flagged GUEST for Jeff to verify.
 - Every punch is auto-sent (with retry) to a private Google Sheet via a Google Apps Script web app (`staff-config.js` holds the endpoint URL). Employees see only Onsite / Offsite / Location unavailable.
-- Icons are generated at deploy time by `tools/make-icons.py`. Logic tests: `node tools/test-staff-core.js`.
+- While an employee is on the clock and the app is open, it sends a location update about every 3 minutes (the screen says "While you're clocked in, your location is shared with Jeff."). Employees never see coordinates or addresses.
+- **Admin view** (accounts with role `admin`, e.g. Jeff): Live (who is on the clock, where, map), Week (hours + CSV download), Timeline (location history per clock-in session, grouped into stops), Punches (edit / void / add a missed punch, all audited), Employees (add, reset password, deactivate, remove, role). Admins don't clock in.
+- Every password field has a Show/Hide toggle (`staff-pw.js`).
+- Icons are generated at deploy time by `tools/make-icons.py`. Logic tests: `node tools/test-staff-core.js` and `node tools/test-admin.js`.
 
 ## What it does
 - Weave a resource in (program, class, company, need)
