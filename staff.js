@@ -112,7 +112,7 @@
   function syncAll() {
     if (syncing || !endpointReady() || !window.fetch) return renderSync();
     var jobs = [];
-    if (db.session && !db.session.mustChangePassword && !db.session.authNeeded)
+    if (db.session && !db.session.mustChangePassword && !db.session.authNeeded && !(me() && me().role === 'admin'))
       WT.pendingPunches(db.punches, myEmail()).forEach(function (p) { jobs.push(function () { return sendEmployee(p); }); });
     db.guestQueue.filter(function (g) { return g.syncStatus !== 'synced'; }).forEach(function (g) { jobs.push(function () { return sendGuest(g); }); });
     if (!jobs.length) return renderSync();
@@ -159,12 +159,12 @@
       'm (paid)' + (s.totals.shiftOpen ? ' · <b>shift open</b>' : '') + '</p>' + days + '</details>';
   }
   function currentScreen() {
-    if (db.session && !db.session.authNeeded) return db.session.mustChangePassword ? 'force' : 'app';
+    if (db.session && !db.session.authNeeded) return db.session.mustChangePassword ? 'force' : (db.session.employee && db.session.employee.role === 'admin' && window.WTAdmin ? 'admin' : 'app');
     return screen === 'guest' || screen === 'guestDone' ? screen : 'login';
   }
   function render() {
     var sc = currentScreen();
-    ['login', 'force', 'guest', 'guestDone', 'app'].forEach(function (id) { $(id).hidden = id !== sc; });
+    ['login', 'force', 'guest', 'guestDone', 'app', 'admin'].forEach(function (id) { $(id).hidden = id !== sc; });
     emit('render', sc);
     renderSync();
     if (sc !== 'app') return;
@@ -196,7 +196,7 @@
 
   window.WTApp = {
     db: function () { return db; }, save: save, api: api, render: render, flash: flash, capture: capture, syncAll: syncAll,
-    endpointReady: endpointReady, me: me, shortTime: shortTime, setScreen: function (s) { screen = s; render(); },
+    endpointReady: endpointReady, me: me, authLost: authLost, esc: esc, hm: hm, dayLabel: dayLabel, currentScreen: function () { return currentScreen(); }, shortTime: shortTime, setScreen: function (s) { screen = s; render(); },
     on: function (name, fn) { listeners.push([name, fn]); }, settings: S,
     start: function () {
       render(); syncAll();

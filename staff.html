@@ -143,6 +143,7 @@
           <div id="actions"></div>
           <p class="busy" hidden></p>
           <p id="sync" class="sync" aria-live="polite"></p>
+          <p id="locNote" class="muted" hidden></p>
         </div>
         <div class="card">
           <h2>Today <span class="muted" id="todayHrs"></span></h2>
@@ -168,6 +169,15 @@
       </section>
     </div>
 
+    <div id="admin" hidden>
+      <div class="bar">
+        <span class="who" id="adName"></span>
+        <span class="links"><button class="ghost" type="button" data-proxy="openPw">Change password</button><button class="ghost" type="button" data-proxy="signOut">Sign out</button></span>
+      </div>
+      <nav id="adTabs"></nav>
+      <div id="adBody"></div>
+    </div>
+
     <div class="modal" id="pwModal" hidden>
       <div class="card">
         <h2>Change password</h2>
@@ -190,5 +200,9 @@
   <script src="staff.js"></script>
   <script src="staff-auth.js"></script>
   <script src="staff-pw.js"></script>
+  <script src="staff-ping.js"></script>
+  <script src="admin-core.js"></script>
+  <script src="admin.js"></script>
+  <script src="admin-more.js"></script>
 </body>
 </html>
