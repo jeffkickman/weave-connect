@@ -39,14 +39,24 @@
     .hrs { font-size:1.6rem; font-weight:800; color:var(--navy); }
     ul.pl { list-style:none; padding:0; margin:.4rem 0 0; font-size:.9rem; } ul.pl li { padding:.35rem 0; border-top:1px solid #f0ece4; }
     .tag { font-size:.72rem; padding:.1rem .4rem; border-radius:6px; font-weight:700; }
-    .tag.on { background:#e3f1e4; color:var(--ok); } .tag.off { background:#f9e3e3; color:var(--bad); }
+    .tag.on { background:#e3f1e4; color:var(--ok); } .tag.off { background:#f9e3e3; color:var(--bad); } .tag.na { background:#eee; color:var(--muted); }
+    .sync { font-size:.8rem; margin:.6rem 0 0; color:var(--muted); } .sync.done::before { content:"✓ "; color:var(--ok); } .sync.wait::before { content:"⟳ "; }
     .note { color:var(--muted); font-style:italic; margin-top:.15rem; }
     .flash { position:sticky; top:.5rem; z-index:5; padding:.8rem; border-radius:10px; font-weight:600; margin-bottom:.8rem; }
     .flash.good { background:#e3f1e4; color:var(--ok); } .flash.bad { background:#f9e3e3; color:var(--bad); }
     #notePanel { border:2px solid var(--gold); }
     details.wk { border-top:1px solid #eee; padding:.5rem 0; } details.wk summary { display:flex; justify-content:space-between; cursor:pointer; font-weight:600; }
     .day { margin:.6rem 0; padding:.5rem; background:#faf8f3; border-radius:8px; } .dh { display:flex; justify-content:space-between; }
-    #busy { font-weight:600; color:var(--navy); }
+    .busy { font-weight:600; color:var(--navy); }
+    form { margin:0; }
+    .err { color:var(--bad); font-weight:600; font-size:.9rem; margin:.6rem 0 0; }
+    .bar { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.8rem; }
+    .bar .who { font-weight:700; color:var(--navy); } .bar .links { display:flex; gap:.4rem; }
+    .bar .links button { width:auto; margin:0; padding:.45rem .6rem; font-size:.8rem; }
+    .banner { background:#fff4d6; border:1px solid var(--gold); color:#5a4510; border-radius:10px; padding:.7rem .8rem; font-weight:600; font-size:.9rem; margin-bottom:.6rem; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; } .grid button { margin:0; }
+    .modal { position:fixed; inset:0; background:rgba(11,31,58,.55); display:flex; align-items:flex-start; justify-content:center; padding:4rem 1rem; z-index:10; }
+    .modal[hidden] { display:none; } .modal .card { width:100%; max-width:440px; }
   </style>
 </head>
 <body>
@@ -57,18 +67,70 @@
   <main>
     <div id="flash" class="flash" hidden></div>
 
-    <section class="card" id="who" hidden>
-      <h2>Who is using this phone?</h2>
-      <label for="pName">Your full name</label>
-      <input id="pName" autocomplete="name" placeholder="First Last">
-      <label for="pId">Employee ID (optional)</label>
-      <input id="pId" placeholder="optional">
-      <button class="go" id="saveProfile">Save &amp; start</button>
-      <p class="muted">This is <b>not a real login</b> — just your name on this device. Your punches are saved <b>only on this phone</b>
-        until the Weave Time server is live. Export your week and send it to payroll.</p>
+    <section class="card" id="login" hidden>
+      <h2>Sign in</h2>
+      <form id="loginForm" autocomplete="on">
+        <label for="lEmail">Email</label>
+        <input id="lEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false">
+        <label for="lPass">Password</label>
+        <input id="lPass" type="password" autocomplete="current-password">
+        <p class="err" id="loginErr" hidden></p>
+        <button class="go" id="loginBtn" type="submit">Sign in</button>
+      </form>
+      <button class="ghost" id="toGuest" type="button">Punch as guest</button>
+      <p class="muted">Accounts are set up by Jeff. Ask Jeff if you need a login or password reset.</p>
+      <p class="muted" id="loginWait" hidden></p>
     </section>
 
+    <section class="card" id="force" hidden>
+      <h2>Set your new password</h2>
+      <p class="muted">You signed in with a temporary password. Choose your own password before you can use the clock.</p>
+      <form id="forceForm">
+        <input type="text" autocomplete="username" hidden>
+        <label for="fNew">New password (at least 8 characters)</label>
+        <input id="fNew" type="password" autocomplete="new-password" minlength="8">
+        <label for="fConfirm">Confirm new password</label>
+        <input id="fConfirm" type="password" autocomplete="new-password" minlength="8">
+        <p class="err" id="forceErr" hidden></p>
+        <button class="go" id="forceBtn" type="submit">Save new password</button>
+      </form>
+      <button class="ghost sm" id="forceSignOut" type="button">Sign out</button>
+    </section>
+
+    <section class="card" id="guest" hidden>
+      <div class="banner">Guest punch — sent to Jeff with a GUEST flag so he can verify and match it to your account.</div>
+      <label for="gName">Your full name</label>
+      <input id="gName" autocomplete="name" placeholder="First Last">
+      <label for="gNote">Short note identifying yourself</label>
+      <input id="gNote" maxlength="300" placeholder="e.g. New hire, no login yet">
+      <p class="err" id="guestErr" hidden></p>
+      <label>Punch</label>
+      <div class="grid" id="guestTypes"></div>
+      <p class="busy" hidden></p>
+      <button class="ghost" id="guestBack" type="button">Back to Sign in</button>
+    </section>
+
+    <section class="card" id="guestDone" hidden>
+      <div class="banner">Guest punch saved</div>
+      <p class="status s-on" id="gdWhat"></p>
+      <p id="gdState"></p>
+      <button class="go" id="gdBack" type="button">Back to Sign in</button>
+      <button class="ghost" id="gdAgain" type="button">Another guest punch</button>
+    </section>
+
+    <div class="card" id="notePanel" hidden>
+      <h2 id="noteTitle">Note required</h2>
+      <p class="muted" id="noteWhy"></p>
+      <label for="noteText">Why are you punching from here? (1–2 sentences)</label>
+      <textarea id="noteText" rows="3" maxlength="500" placeholder="e.g. Dropping off paperwork for a client"></textarea>
+      <div class="row"><button class="ghost" id="noteCancel" type="button">Cancel</button><button class="go" id="noteSave" type="button">Save punch</button></div>
+    </div>
+
     <div id="app" hidden>
+      <div class="bar">
+        <span class="who" id="meName"></span>
+        <span class="links"><button class="ghost" id="openPw" type="button">Change password</button><button class="ghost" id="signOut" type="button">Sign out</button></span>
+      </div>
       <nav>
         <button data-tab="clock">Clock</button>
         <button data-tab="week">This week</button>
@@ -77,17 +139,10 @@
 
       <section id="clock">
         <div class="card">
-          <div class="muted" id="meName"></div>
           <div class="status" id="status"></div>
           <div id="actions"></div>
-          <p id="busy" hidden></p>
-        </div>
-        <div class="card" id="notePanel" hidden>
-          <h2 id="noteTitle">Note required</h2>
-          <p class="muted" id="noteWhy"></p>
-          <label for="noteText">Why are you punching from here? (1–2 sentences)</label>
-          <textarea id="noteText" rows="3" maxlength="500" placeholder="e.g. Delivering paperwork to a client in Opp"></textarea>
-          <div class="row"><button class="ghost" id="noteCancel">Cancel</button><button class="go" id="noteSave">Save punch</button></div>
+          <p class="busy" hidden></p>
+          <p id="sync" class="sync" aria-live="polite"></p>
         </div>
         <div class="card">
           <h2>Today <span class="muted" id="todayHrs"></span></h2>
@@ -97,27 +152,42 @@
           <h2>This week</h2>
           <div class="hrs" id="wkHrs"></div>
           <p class="muted" id="wkSub"></p>
-          <p class="muted">Lunch is unpaid (subtracted). Breaks are paid (counted, shown separately). Location is checked on every punch;
-            onsite = within 250 m of the office at 1510 E Three Notch St.</p>
+          <p class="muted">Lunch is unpaid (subtracted). Breaks are paid (counted, shown separately). Each punch checks whether you are at the office.</p>
         </div>
-        <p class="muted">Not a real login — data stays on this phone. <a href="#" id="editProfile">Change name</a></p>
       </section>
 
       <section class="card" id="week" hidden>
         <h2>This week (Sun–Sat, Central)</h2>
         <div id="weekBody"></div>
-        <p class="muted">Send to payroll: <b>CSV</b> or <b>JSON</b> downloads a file (format <code>weave-time-weekly/v1</code>);
-          <b>Share / Copy</b> sends a text summary. Every punch includes time, onsite/offsite, distance, GPS and note.</p>
       </section>
 
       <section class="card" id="history" hidden>
         <h2>Past weeks</h2>
-        <p class="muted">Tap a week for the daily breakdown. All history stays on this phone (nothing is deleted).</p>
+        <p class="muted">Tap a week for the daily breakdown.</p>
         <div id="histBody"></div>
       </section>
     </div>
+
+    <div class="modal" id="pwModal" hidden>
+      <div class="card">
+        <h2>Change password</h2>
+        <form id="pwForm">
+          <input type="text" autocomplete="username" hidden>
+          <label for="pCur">Current password</label>
+          <input id="pCur" type="password" autocomplete="current-password">
+          <label for="pNew">New password (at least 8 characters)</label>
+          <input id="pNew" type="password" autocomplete="new-password" minlength="8">
+          <label for="pConfirm">Confirm new password</label>
+          <input id="pConfirm" type="password" autocomplete="new-password" minlength="8">
+          <p class="err" id="pwErr" hidden></p>
+          <div class="row"><button class="ghost" id="pwCancel" type="button">Cancel</button><button class="go" id="pwBtn" type="submit">Change password</button></div>
+        </form>
+      </div>
+    </div>
   </main>
+  <script src="staff-config.js"></script>
   <script src="staff-core.js"></script>
   <script src="staff.js"></script>
+  <script src="staff-auth.js"></script>
 </body>
 </html>

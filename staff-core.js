@@ -1,4 +1,4 @@
-/* Weave Time — core logic (pure functions, no DOM). Used by staff.html and by tests (node). */
+/* Weave Time — core logic (pure functions, no DOM). Used by staff.html and by tests (node: tools/test-staff-core.js). */
 (function (root) {
   'use strict';
 
@@ -121,7 +121,7 @@
     return { days: days, open: iv.open, issues: iv.issues };
   }
   function r2(x) { return Math.round(x * 100) / 100; }
-  function weekSummary(punches, wkStart, nowMs, tz, profile) {
+  function weekSummary(punches, wkStart, nowMs, tz) {
     tz = tz || CONFIG.TIMEZONE;
     var dt = dailyTotals(punches, nowMs, tz), days = [], tot = { paid: 0, lunch: 0, brk: 0 };
     var wkEnd = addDays(wkStart, 6);
@@ -130,52 +130,106 @@
       var k = addDays(wkStart, i), d = dt.days[k] || { paidMin: 0, lunchMin: 0, breakMin: 0 };
       tot.paid += d.paidMin; tot.lunch += d.lunchMin; tot.brk += d.breakMin;
       days.push({ date: k, netHours: r2(d.paidMin / 60), lunchMinutes: Math.round(d.lunchMin), breakMinutes: Math.round(d.breakMin),
-        punchCount: wp.filter(function (p) { return dateKey(Date.parse(p.ts), tz) === k; }).length });
+        punches: wp.filter(function (p) { return dateKey(Date.parse(p.ts), tz) === k; }) });
     }
-    return {
-      format: 'weave-time-weekly/v1', generatedAt: new Date(nowMs || Date.now()).toISOString(), timezone: tz,
-      source: 'device-local (phone localStorage) — not server-verified',
-      employee: { name: (profile && profile.name) || '', employeeId: (profile && profile.empId) || '' },
-      weekStart: wkStart, weekEnd: wkEnd,
-      policy: { lunchPaid: CONFIG.LUNCH_PAID, breakPaid: CONFIG.BREAK_PAID, onsiteRadiusM: CONFIG.ONSITE_RADIUS_M, office: CONFIG.OFFICE },
+    return { weekStart: wkStart, weekEnd: wkEnd, days: days, punches: wp, issues: dt.issues,
       totals: { netHours: r2(tot.paid / 60), lunchMinutes: Math.round(tot.lunch), breakMinutes: Math.round(tot.brk),
-        punchCount: wp.length, offsitePunches: wp.filter(function (p) { return !p.onsite; }).length,
-        shiftOpen: dt.open && nowMs ? true : false },
-      days: days,
-      punches: wp.map(function (p) {
-        return { type: p.type, label: TYPES[p.type], ts: p.ts, local: p.local, lat: p.lat, lng: p.lng, accuracyM: p.acc,
-          distanceM: p.dist, onsite: !!p.onsite, locationStatus: p.locStatus || '', note: p.note || '' };
-      }),
-      issues: dt.issues
-    };
+        punchCount: wp.length, offsitePunches: wp.filter(function (p) { return onsiteStatus(p) === 'offsite'; }).length,
+        shiftOpen: !!(dt.open && nowMs) } };
   }
-  function csvCell(v) { v = v === null || v === undefined ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
-  function toCSV(sum) {
-    var H = ['record', 'employee', 'employee_id', 'week_start', 'date', 'type', 'local_time', 'iso_time', 'net_hours', 'lunch_min', 'break_min',
-      'onsite', 'distance_m', 'lat', 'lng', 'accuracy_m', 'location_status', 'note'];
-    var e = sum.employee, rows = [H];
-    rows.push(['week', e.name, e.employeeId, sum.weekStart, sum.weekStart + '..' + sum.weekEnd, '', '', '', sum.totals.netHours, sum.totals.lunchMinutes, sum.totals.breakMinutes, '', '', '', '', '', '', sum.totals.shiftOpen ? 'shift still open' : '']);
-    sum.days.forEach(function (d) { rows.push(['day', e.name, e.employeeId, sum.weekStart, d.date, '', '', '', d.netHours, d.lunchMinutes, d.breakMinutes, '', '', '', '', '', '', '']); });
-    sum.punches.forEach(function (p) {
-      rows.push(['punch', e.name, e.employeeId, sum.weekStart, p.ts ? dateKey(Date.parse(p.ts), sum.timezone) : '', p.type, p.local, p.ts, '', '', '',
-        p.onsite ? 'yes' : 'no', p.distanceM, p.lat, p.lng, p.accuracyM, p.locationStatus, p.note]);
+
+  // ===== central sync (Google Apps Script "Weave Time Punches": Punches + Employees tabs) =====
+  function newPunchId(cryptoObj) {
+    if (cryptoObj && typeof cryptoObj.randomUUID === 'function') return cryptoObj.randomUUID();
+    var b = [];
+    for (var i = 0; i < 16; i++) b.push(Math.floor(Math.random() * 256));
+    if (cryptoObj && cryptoObj.getRandomValues) { var u = new Uint8Array(16); cryptoObj.getRandomValues(u); b = Array.prototype.slice.call(u); }
+    b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    var h = b.map(function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  function onsiteStatus(p) {
+    if (p.onsite_status === 'onsite' || p.onsite_status === 'offsite' || p.onsite_status === 'unknown') return p.onsite_status;
+    if (p.lat === null || p.lat === undefined || p.locStatus !== 'ok') return 'unknown';
+    return p.onsite ? 'onsite' : 'offsite';
+  }
+  // Employee-facing label: never includes coordinates, distance or address.
+  function locationLabel(p) { var s = onsiteStatus(p); return s === 'onsite' ? 'Onsite' : s === 'offsite' ? 'Offsite' : 'Location unavailable'; }
+  function nz(v) { return v === null || v === undefined ? '' : v; }
+  function punchFields(p) {
+    var ms = Date.parse(p.ts);
+    return { punch_id: p.punch_id, punch_type: p.type, timestamp_utc: new Date(ms).toISOString(), local_time_ct: localTime(ms),
+      week_start_sun: weekStart(ms), onsite_status: onsiteStatus(p), distance_m: nz(p.dist), location_description: p.locDesc || '',
+      latitude: nz(p.lat), longitude: nz(p.lng), accuracy_m: nz(p.acc), location_status: p.locStatus || '', note: p.note || '' };
+  }
+  function assign(o, x) { for (var k in x) if (Object.prototype.hasOwnProperty.call(x, k)) o[k] = x[k]; return o; }
+  function buildPayload(p, appKey, sessionToken) {
+    return assign(assign({ action: 'punch', appKey: appKey, sessionToken: sessionToken || '' }, punchFields(p)), { source: 'weave-time-web' });
+  }
+  function buildGuestPayload(p, appKey) {
+    return assign(assign({ action: 'guest_punch', appKey: appKey, guest_name: p.guestName || '', guest_note: p.guestNote || '' }, punchFields(p)),
+      { source: 'weave-time-guest' });
+  }
+  function guestOk(name, note) { return (name || '').trim().length >= 2 && (note || '').trim().length >= 4; }
+  function passwordProblem(pw, confirm) {
+    if ((pw || '').length < 8) return 'Password must be at least 8 characters.';
+    if (pw !== confirm) return 'The two new passwords do not match.';
+    return '';
+  }
+  // Sheets may hand back ISO text or a Date-ish string; normalise to ISO (or '' if unparseable).
+  function normalizeTs(v) {
+    var ms = Date.parse(v);
+    if (isNaN(ms)) ms = Date.parse(String(v || '').replace(/\s*\(.*\)\s*$/, ''));
+    return isNaN(ms) ? '' : new Date(ms).toISOString();
+  }
+  function fromServer(sp, email) {
+    var ts = normalizeTs(sp.ts);
+    return { punch_id: String(sp.punch_id || ''), type: sp.type, ts: ts, local: sp.local_time_ct || (ts ? localTime(Date.parse(ts)) : ''),
+      onsite_status: sp.onsite_status || 'unknown', locStatus: sp.location_status || '', note: sp.note || '', status: sp.status || 'active',
+      syncStatus: 'synced', ownerEmail: email };
+  }
+  // Server is the source of truth for this employee's synced punches (Jeff's Sheet edits win).
+  // Local punches still pending upload are kept unless the server already has that punch_id. Void punches are dropped.
+  function mergeServerPunches(local, serverList, email) {
+    var byId = {}, out = [];
+    (serverList || []).forEach(function (sp) {
+      if (String(sp.status || '').toLowerCase() === 'void' || !TYPES[sp.type]) return;
+      var p = fromServer(sp, email); if (!p.punch_id || !p.ts) return;
+      byId[p.punch_id] = true; out.push(p);
     });
-    return rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
+    (local || []).forEach(function (p) {
+      if (p.ownerEmail !== email) { out.push(p); return; }               // another account's queue on this phone: untouched
+      if (p.syncStatus !== 'synced' && !byId[p.punch_id]) out.push(p);    // still waiting to upload
+    });
+    return out;
   }
-  function toText(sum) {
-    var L = ['Weave Time — weekly hours', sum.employee.name + (sum.employee.employeeId ? ' (ID ' + sum.employee.employeeId + ')' : ''),
-      'Week ' + sum.weekStart + ' to ' + sum.weekEnd + ' (Sun–Sat, Central)',
-      'Net paid hours: ' + sum.totals.netHours.toFixed(2) + '  | Lunch (unpaid): ' + sum.totals.lunchMinutes + ' min  | Breaks (paid): ' + sum.totals.breakMinutes + ' min',
-      'Offsite punches: ' + sum.totals.offsitePunches + (sum.totals.shiftOpen ? '  | SHIFT STILL OPEN' : ''), ''];
-    sum.days.forEach(function (d) { if (d.punchCount || d.netHours) L.push(d.date + ': ' + d.netHours.toFixed(2) + ' h (lunch ' + d.lunchMinutes + 'm, break ' + d.breakMinutes + 'm)'); });
-    L.push('');
-    sum.punches.forEach(function (p) { L.push(p.local + ' — ' + p.label + ' — ' + (p.onsite ? 'onsite' : 'OFFSITE') + (p.distanceM !== null && p.distanceM !== undefined ? ' (' + p.distanceM + ' m)' : ' (no location)') + (p.note ? ' — "' + p.note + '"' : '')); });
-    L.push('', 'Data recorded on this phone (format weave-time-weekly/v1).');
-    return L.join('\n');
+  function forOwner(punches, email) { return punches.filter(function (p) { return p.ownerEmail === email && p.status !== 'void'; }); }
+  function pendingPunches(punches, email) {
+    return sortPunches(punches).filter(function (p) { return p.syncStatus !== 'synced' && (email === undefined || p.ownerEmail === email); });
+  }
+  function markSynced(punches, id, atIso) {
+    for (var i = 0; i < punches.length; i++) if (punches[i].punch_id === id) { punches[i].syncStatus = 'synced'; punches[i].syncedAt = atIso; return true; }
+    return false;
+  }
+  function syncLabel(n, endpointReady, authNeeded) {
+    if (!n) return 'All punches saved';
+    var t = n + ' punch' + (n === 1 ? '' : 'es') + ' waiting to sync';
+    if (authNeeded) return t + ' — sign in again to send';
+    return t + (endpointReady ? '' : ' (saved on this phone)');
+  }
+  // Short human-readable place from BigDataCloud reverse-geocode-client JSON (city, state ZIP). Never shown to employees.
+  function placeFromBDC(j) {
+    if (!j) return '';
+    var city = j.city || j.locality || '', st = j.principalSubdivisionCode ? String(j.principalSubdivisionCode).replace(/^US-/, '') : (j.principalSubdivision || '');
+    return [city, [st, j.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ').slice(0, 200);
   }
 
   var api = { CONFIG: CONFIG, TYPES: TYPES, stateOf: stateOf, allowed: allowed, canPunch: canPunch, haversineM: haversineM,
     assessLocation: assessLocation, noteOk: noteOk, dateKey: dateKey, weekStart: weekStart, addDays: addDays, midnight: midnight,
-    localTime: localTime, intervals: intervals, dailyTotals: dailyTotals, weekSummary: weekSummary, toCSV: toCSV, toText: toText, sortPunches: sortPunches };
+    localTime: localTime, intervals: intervals, dailyTotals: dailyTotals, weekSummary: weekSummary, sortPunches: sortPunches,
+    newPunchId: newPunchId, onsiteStatus: onsiteStatus, locationLabel: locationLabel, buildPayload: buildPayload,
+    buildGuestPayload: buildGuestPayload, guestOk: guestOk, passwordProblem: passwordProblem, normalizeTs: normalizeTs,
+    mergeServerPunches: mergeServerPunches, forOwner: forOwner, pendingPunches: pendingPunches, markSynced: markSynced,
+    syncLabel: syncLabel, placeFromBDC: placeFromBDC };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WT = api;
 })(this);

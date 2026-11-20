@@ -1,8 +1,8 @@
 /* Weave Time service worker: network-first for the staff app, cached copy when offline. */
-var CACHE = 'weave-time-v3';
-var FILES = ['staff.html', 'staff.js', 'staff-core.js', 'staff.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+var CACHE = 'weave-time-v5';
+var ASSETS = ['staff.html', 'staff-config.js', 'staff-core.js', 'staff.js', 'staff-auth.js', 'staff.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
@@ -12,8 +12,7 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   var u = new URL(e.request.url);
   if (e.request.method !== 'GET' || u.origin !== location.origin) return;
-  var name = u.pathname.split('/').pop() || '';
-  var mine = FILES.some(function (f) { return u.pathname.endsWith('/' + f); });
+  var mine = ASSETS.some(function (f) { return u.pathname.endsWith('/' + f); });
   if (!mine) return; // leave other pages (Weave Connect) alone
   e.respondWith(fetch(e.request).then(function (r) {
     if (r.ok) { var cp = r.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, cp); }); }
