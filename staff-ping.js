@@ -7,7 +7,7 @@
   var NOTICE = "While you're clocked in, your location is shared with Jeff.";
   // Pure decision (unit-tested): should a ping go out now?
   function pingDue(o) {
-    if (!o.signedIn || o.role === 'admin' || o.mustChange || o.authNeeded) return false;
+    if (!o.signedIn || (o.role === 'admin' && !o.testClock) || o.mustChange || o.authNeeded) return false;   // v6: admin pings only from the Test clock
     if (!o.visible || o.state === 'off' || !o.state) return false;
     if (o.unsupported || o.denied) return false;
     if (o.inFlight) return false;
@@ -22,7 +22,7 @@
   function myState() { var e = A.me(); return e ? WT.stateOf(WT.forOwner(A.db().punches, e.email)) : 'off'; }
   function inputs() {
     var s = A.db().session || {}, e = s.employee || {};
-    return { signedIn: !!s.token, role: e.role, mustChange: !!s.mustChangePassword, authNeeded: !!s.authNeeded,
+    return { signedIn: !!s.token, role: e.role, testClock: !!A.db().adminTestClock, mustChange: !!s.mustChangePassword, authNeeded: !!s.authNeeded,
       visible: document.visibilityState !== 'hidden', state: myState(), unsupported: unsupported, denied: denied, inFlight: inFlight, lastMs: lastMs, now: Date.now() };
   }
   function tick() {
@@ -38,7 +38,7 @@
   }
   function notice() {
     var el = document.getElementById('locNote'); if (!el) return;
-    var s = A.db().session, e = s && s.employee, show = !!(e && e.role !== 'admin' && myState() !== 'off');
+    var s = A.db().session, e = s && s.employee, show = !!(e && (e.role !== 'admin' || A.db().adminTestClock) && myState() !== 'off');
     el.textContent = show ? NOTICE : ''; el.hidden = !show;
   }
   A.on('render', function (sc) { if (sc === 'app') { notice(); setTimeout(tick, 1500); } });

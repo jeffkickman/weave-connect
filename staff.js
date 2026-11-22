@@ -89,6 +89,7 @@
     capture(type, function (rec) {
       rec.ownerEmail = e.email; rec.name = e.full_name; rec.empId = e.employee_id || '';
       if (type === 'clock_in' && window.WTDriver && window.WTDriver.testShift()) rec.isTest = true;
+      if (e.role === 'admin') rec.isTest = true;
       db.punches.push(rec); save();
       flash(WT.TYPES[rec.type] + ' saved at ' + shortTime(rec.ts) + ' — ' + WT.locationLabel(rec));
       render();
@@ -113,7 +114,7 @@
   function syncAll() {
     if (syncing || !endpointReady() || !window.fetch) return renderSync();
     var jobs = [];
-    if (db.session && !db.session.mustChangePassword && !db.session.authNeeded && !(me() && me().role === 'admin'))
+    if (db.session && !db.session.mustChangePassword && !db.session.authNeeded)   // admin punches exist only from the Test clock (server stores them as TEST)
       WT.pendingPunches(db.punches, myEmail()).forEach(function (p) { jobs.push(function () { return sendEmployee(p); }); });
     db.guestQueue.filter(function (g) { return g.syncStatus !== 'synced'; }).forEach(function (g) { jobs.push(function () { return sendGuest(g); }); });
     if (!jobs.length) return renderSync();
@@ -160,7 +161,7 @@
       'm (paid)' + (s.totals.shiftOpen ? ' · <b>shift open</b>' : '') + '</p>' + days + '</details>';
   }
   function currentScreen() {
-    if (db.session && !db.session.authNeeded) return db.session.mustChangePassword ? 'force' : (db.session.employee && db.session.employee.role === 'admin' && window.WTAdmin ? 'admin' : 'app');
+    if (db.session && !db.session.authNeeded) return db.session.mustChangePassword ? 'force' : (db.session.employee && db.session.employee.role === 'admin' && window.WTAdmin && !db.adminTestClock ? 'admin' : 'app');   // v6: admin Test clock = app screen, TEST punches only
     return screen === 'guest' || screen === 'guestDone' ? screen : 'login';
   }
   function render() {

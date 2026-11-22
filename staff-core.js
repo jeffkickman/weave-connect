@@ -188,7 +188,7 @@
     var ts = normalizeTs(sp.ts);
     return { punch_id: String(sp.punch_id || ''), type: sp.type, ts: ts, local: sp.local_time_ct || (ts ? localTime(Date.parse(ts)) : ''),
       onsite_status: sp.onsite_status || 'unknown', locStatus: sp.location_status || '', note: sp.note || '', status: sp.status || 'active',
-      syncStatus: 'synced', ownerEmail: email };
+      syncStatus: 'synced', ownerEmail: email, isTest: sp.is_test === true || undefined };
   }
   // Server is the source of truth for this employee's synced punches (Jeff's Sheet edits win).
   // Local punches still pending upload are kept unless the server already has that punch_id. Void punches are dropped.

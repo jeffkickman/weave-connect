@@ -127,6 +127,7 @@
     </div>
 
     <div id="app" hidden>
+      <div class="banner" id="tcBar" hidden><b>TEST CLOCK</b> — your punches here are saved as TEST only (never payroll). <button class="ghost sm" id="tcBack" type="button">Back to admin</button></div>
       <div class="bar">
         <span class="who" id="meName"></span>
         <span class="links"><button class="ghost" id="openPw" type="button">Change password</button><button class="ghost" id="signOut" type="button">Sign out</button></span>
@@ -146,6 +147,7 @@
           <p id="locNote" class="muted" hidden></p>
         </div>
         <div class="card" id="drvCard" data-drvbox="driver" hidden></div>
+        <div class="card" id="undCard" data-undbox="driver" hidden></div>
         <div class="card">
           <h2>Today <span class="muted" id="todayHrs"></span></h2>
           <ul class="pl" id="today"></ul>
@@ -204,10 +206,15 @@
   <script src="staff-ping.js"></script>
   <script src="driver-core.js"></script>
   <script src="driver.js"></script>
+  <script src="ocr-core.js"></script>
+  <script src="wt-media.js"></script>
+  <script src="undelivered.js"></script>
+  <script src="autofill.js"></script>
   <script src="admin-core.js"></script>
   <script src="admin.js"></script>
   <script src="admin-more.js"></script>
   <script src="admin-people.js"></script>
   <script src="admin-routes.js"></script>
+  <script src="admin-undelivered.js"></script>
 </body>
 </html>
