@@ -130,7 +130,7 @@
       <div class="banner" id="tcBar" hidden><b>TEST CLOCK</b> — your punches here are saved as TEST only (never payroll). <button class="ghost sm" id="tcBack" type="button">Back to admin</button></div>
       <div class="bar">
         <span class="who" id="meName"></span>
-        <span class="links"><button class="ghost" id="openPw" type="button">Change password</button><button class="ghost" id="signOut" type="button">Sign out</button></span>
+        <span class="links"><button class="ghost" type="button" data-idea="open" hidden>Suggest an idea</button><button class="ghost" id="openPw" type="button">Change password</button><button class="ghost" id="signOut" type="button">Sign out</button></span>
       </div>
       <nav>
         <button data-tab="clock">Clock</button>
@@ -175,7 +175,7 @@
     <div id="admin" hidden>
       <div class="bar">
         <span class="who" id="adName"></span>
-        <span class="links"><button class="ghost" type="button" data-proxy="openPw">Change password</button><button class="ghost" type="button" data-proxy="signOut">Sign out</button></span>
+        <span class="links"><button class="ghost" type="button" data-idea="open" hidden>Suggest an idea</button><button class="ghost" type="button" data-proxy="openPw">Change password</button><button class="ghost" type="button" data-proxy="signOut">Sign out</button></span>
       </div>
       <nav id="adTabs"></nav>
       <div id="adBody"></div>
@@ -210,11 +210,13 @@
   <script src="wt-media.js"></script>
   <script src="undelivered.js"></script>
   <script src="autofill.js"></script>
+  <script src="suggestions.js"></script>
   <script src="admin-core.js"></script>
   <script src="admin.js"></script>
   <script src="admin-more.js"></script>
   <script src="admin-people.js"></script>
   <script src="admin-routes.js"></script>
   <script src="admin-undelivered.js"></script>
+  <script src="admin-suggest.js"></script>
 </body>
 </html>
