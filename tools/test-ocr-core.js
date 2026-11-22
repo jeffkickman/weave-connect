@@ -10,7 +10,7 @@ t('TBA: clean, spaced, OCR confusions, prefix confusion', () => {
   const two = O.extractTba('TBA111111111111\nTBA222222222222'); assert.strictEqual(two.best, ''); assert.strictEqual(two.matches.length, 2);
 });
 t('TBA validation', () => {
-  assert.strictEqual(O.tbaProblem('tba 1234 5678 9012'), ''); assert.match(O.tbaProblem('TBA12'), /digits/); assert.match(O.tbaProblem('TBA1234567890'), /^warn:/); assert.match(O.tbaProblem(''), /Enter/);
+  assert.strictEqual(O.tbaProblem('tba 1234 5678 9012'), ''); assert.match(O.tbaProblem('TBA12'), /digits/); assert.match(O.tbaProblem('TBA1234567890'), /12 digits/); assert.match(O.tbaProblem(''), /Enter/);
 });
 t('start form: labeled values both orders; only confident ones', () => {
   const r = O.parseScreens('Route 9\n142 packages\nStops: 118\nOverflow 3\nWave 10:20 AM', 'start', ['Route 1', '3 Notch', 'Route 9']);

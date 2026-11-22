@@ -23,8 +23,8 @@
   function normTba(v) { return String(v || '').toUpperCase().replace(/[\s\-_.]/g, ''); }
   function tbaProblem(v) {
     var t = normTba(v); if (!t) return 'Enter the TBA number.';
-    if (!/^TBA\d{9,15}$/.test(t)) return 'TBA number must be TBA followed by digits.';
-    return /^TBA\d{12}$/.test(t) ? '' : 'warn:Most TBA numbers have 12 digits. Double-check it.';
+    if (!/^TBA\d{12}$/.test(t)) return 'TBA number must be TBA followed by exactly 12 digits.';
+    return '';
   }
 
   // ===== screenshot auto-fill =====
