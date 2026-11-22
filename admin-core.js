@@ -50,11 +50,11 @@
   function csv(rows) { return rows.map(function (r) { return r.map(cell).join(','); }).join('\r\n') + '\r\n'; }
   function weekCsv(rep) {
     var dates = (rep.employees[0] && rep.employees[0].days.map(function (d) { return d.date; })) || [];
-    var rows = [['Weave Time weekly hours', rep.week_start_sun + ' to ' + rep.week_end_sat, 'Central time', 'Lunch unpaid; breaks paid']],
-      head = ['Employee', 'Employee ID', 'Email'].concat(dates, ['Net hours', 'Lunch min', 'Break min', 'Punches', 'Offsite punches', 'Edited punches', 'Shift open', 'Issues']);
+    var rows = [['Weave Time weekly hours', rep.week_start_sun + ' to ' + rep.week_end_sat, 'Central time', 'Lunch unpaid; breaks paid', rep.role_filter ? 'Only role: ' + rep.role_filter : 'All roles', rep.include_test ? 'INCLUDES TEST shifts' : 'TEST shifts excluded']],
+      head = ['Employee', 'Employee ID', 'Email', 'Roles'].concat(dates, ['Net hours', 'Lunch min', 'Break min', 'Punches', 'Offsite punches', 'Edited punches', 'Shift open', 'Issues']);
     rows.push(head);
     rep.employees.forEach(function (e) {
-      rows.push([e.full_name, e.employee_id, e.email].concat(e.days.map(function (d) { return d.netHours.toFixed(2); }),
+      rows.push([e.full_name, e.employee_id, e.email, (e.roles || []).join(', ')].concat(e.days.map(function (d) { return d.netHours.toFixed(2); }),
         [e.netHours.toFixed(2), e.lunchMinutes, e.breakMinutes, e.punchCount, e.offsite.length, e.edited.length, e.shiftOpen ? 'YES' : '', (e.issues || []).join('; ')]));
     });
     rows.push([]); rows.push(['GUEST punches (not matched to an account)']); rows.push(['Guest name', 'Punch', 'Central time', 'Onsite', 'Guest note', 'Note', 'Place']);

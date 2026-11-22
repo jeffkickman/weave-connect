@@ -28,12 +28,14 @@ t('Central datetime-local <-> UTC, both CST and CDT, round trip', () => {
 });
 t('week CSV: header, per-day hours, totals, flags, guests, formula-safe cells', () => {
   const rep = { week_start_sun: '2026-11-15', week_end_sat: '2026-11-21', guests: [{ employee_name: 'Gus', punch_type: 'clock_in', local_time_ct: 'Wed', onsite_status: 'onsite', guest_note: 'New hire', note: '', location_description: '' }],
-    employees: [{ full_name: '=HYPERLINK("x")', employee_id: 'E1', email: 'a@x.com', netHours: 7.25, lunchMinutes: 30, breakMinutes: 15, punchCount: 6, shiftOpen: false, issues: [],
+    employees: [{ full_name: '=HYPERLINK("x")', employee_id: 'E1', email: 'a@x.com', roles: ['driver', 'contractor'], netHours: 7.25, lunchMinutes: 30, breakMinutes: 15, punchCount: 6, shiftOpen: false, issues: [],
       offsite: [{}], edited: [], days: ['2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21'].map(d => ({ date: d, netHours: d === '2026-11-18' ? 7.25 : 0 })) }] };
   const lines = X.weekCsv(rep).split('\r\n');
-  assert.strictEqual(lines[1], 'Employee,Employee ID,Email,2026-11-15,2026-11-16,2026-11-17,2026-11-18,2026-11-19,2026-11-20,2026-11-21,Net hours,Lunch min,Break min,Punches,Offsite punches,Edited punches,Shift open,Issues');
-  assert.strictEqual(lines[2], '"\'=HYPERLINK(""x"")",E1,a@x.com,0.00,0.00,0.00,7.25,0.00,0.00,0.00,7.25,30,15,6,1,0,,');
+  assert.strictEqual(lines[1], 'Employee,Employee ID,Email,Roles,2026-11-15,2026-11-16,2026-11-17,2026-11-18,2026-11-19,2026-11-20,2026-11-21,Net hours,Lunch min,Break min,Punches,Offsite punches,Edited punches,Shift open,Issues');
+  assert.strictEqual(lines[2], '"\'=HYPERLINK(""x"")",E1,a@x.com,"driver, contractor",0.00,0.00,0.00,7.25,0.00,0.00,0.00,7.25,30,15,6,1,0,,');
   assert(lines.some(l => l.startsWith('Gus,clock_in,Wed,onsite,New hire')));
+  assert(lines[0].includes('All roles') && lines[0].includes('TEST shifts excluded'));
+  assert(X.weekCsv(Object.assign({}, rep, { role_filter: 'contractor', include_test: true })).split('\r\n')[0].includes('Only role: contractor'));
 });
 t('punches CSV has every audit column', () => {
   const h = X.punchesCsv([{ punch_id: 'p1', edited_by: 'Jeffery Watson', edit_reason: 'Started early, per Amy' }]).split('\r\n');
