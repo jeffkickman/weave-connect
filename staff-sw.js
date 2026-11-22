@@ -1,6 +1,6 @@
 /* Weave Time service worker: network-first for the staff app, cached copy when offline. */
-var CACHE = 'weave-time-v7';
-var ASSETS = ['staff.html', 'staff-config.js', 'staff-core.js', 'staff.js', 'staff-auth.js', 'staff-pw.js', 'staff-ping.js', 'admin-core.js', 'admin.js', 'admin-more.js', 'driver-core.js', 'driver.js', 'admin-routes.js', 'staff.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+var CACHE = 'weave-time-v8';
+var ASSETS = ['staff.html', 'staff-config.js', 'staff-core.js', 'staff.js', 'staff-auth.js', 'staff-pw.js', 'staff-ping.js', 'admin-core.js', 'admin.js', 'admin-more.js', 'admin-people.js', 'driver-core.js', 'driver.js', 'admin-routes.js', 'staff.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
 });

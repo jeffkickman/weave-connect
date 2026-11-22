@@ -93,7 +93,7 @@
   // ===== Week =====
   function loadWeek(ws) {
     st.week = null; st.weekLoading = true; if (st.tab === 'week') draw();
-    return call('admin_week_report', { week_start: ws || '', include_test: !!st.weekTest }).then(function (j) { st.weekLoading = false; st.week = j; st.weekStart = j.week_start_sun; if (st.tab === 'week') draw(); },
+    return call('admin_week_report', { week_start: ws || '', include_test: !!st.weekTest, role_filter: st.weekRole || '' }).then(function (j) { st.weekLoading = false; st.week = j; st.weekStart = j.week_start_sun; if (st.tab === 'week') draw(); },
       function (e) { st.weekLoading = false; fail(e); });
   }
   views.week = function () {
@@ -104,14 +104,15 @@
       var det = e.offsite.map(function (o) { return '<div class="note">Offsite ' + esc(o.type) + ' ' + esc(o.local_time_ct) + ': “' + esc(o.note) + '” ' + mapsBtn(o.maps_link, 'Map') + '</div>'; }).join('') +
         e.edited.map(function (o) { return '<div class="note">Edited ' + esc(o.type) + ' ' + esc(o.local_time_ct) + ' by ' + esc(o.edited_by) + ': ' + esc(o.edit_reason) + '</div>'; }).join('') +
         (e.issues && e.issues.length ? '<div class="note" style="color:#a32020">' + esc(e.issues.join('; ')) + '</div>' : '');
-      return '<tr><td><b>' + esc(e.full_name) + '</b><br><span class="muted">' + esc(e.employee_id) + '</span> ' + flags + det + '</td>' +
+      return '<tr><td><b>' + esc(e.full_name) + '</b><br><span class="muted">' + esc(e.employee_id) + (e.roles ? ' · ' + esc(e.roles.join(', ')) : '') + '</span> ' + flags + det + '</td>' +
         e.days.map(function (d) { return '<td class="n">' + (d.netHours ? d.netHours.toFixed(2) : '–') + '</td>'; }).join('') +
         '<td class="n"><b>' + e.netHours.toFixed(2) + '</b></td><td class="n">' + e.lunchMinutes + '</td><td class="n">' + e.breakMinutes + '</td></tr>';
     }).join('');
     var guests = (r.guests || []).map(function (g) { return '<tr><td>' + esc(g.employee_name) + ' <span class="pill p-bad">GUEST</span></td><td>' + esc(g.punch_type) + '</td><td>' + esc(g.local_time_ct) + '</td><td>' + esc(g.guest_note) + (g.note ? ' — ' + esc(g.note) : '') + '</td></tr>'; }).join('');
     return '<div class="ad-row"><button class="ghost btn-s" data-wk="-7" type="button">‹ Prev</button><b class="ad-grow" style="text-align:center">Week ' + esc(A.dayLabel(r.week_start_sun)) + ' – ' + esc(A.dayLabel(r.week_end_sat)) + '</b>' +
       '<button class="ghost btn-s" data-wk="7" type="button">Next ›</button></div>' +
-      '<div class="ad-row" style="margin:.5rem 0"><button class="go btn-s" id="csvHours" type="button">Download hours CSV</button><button class="ghost btn-s" id="csvPunches" type="button">Download punches CSV</button><label style="margin:0"><input type="checkbox" id="wkTest" style="width:auto"' + (st.weekTest ? ' checked' : '') + '> Include TEST shifts</label></div>' +
+      '<div class="ad-row" style="margin:.5rem 0"><button class="go btn-s" id="csvHours" type="button">Download hours CSV</button><button class="ghost btn-s" id="csvPunches" type="button">Download punches CSV</button><label style="margin:0"><input type="checkbox" id="wkTest" style="width:auto"' + (st.weekTest ? ' checked' : '') + '> Include TEST shifts</label>' +
+      (r.roles_catalog ? '<select id="wkRole" style="width:auto"><option value="">All roles</option>' + r.roles_catalog.map(function (x) { return '<option' + (x === st.weekRole ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' : '') + '</div>' +
       (st.weekTest ? '<div class="banner">Including TEST shifts — not for payroll.</div>' : '') +
       '<div class="ad-card ad-scroll"><table class="ad-tbl"><tr><th>Employee</th>' + dates.map(function (d) { return '<th class="n">' + esc(A.dayLabel(d).split(',')[0]) + '</th>'; }).join('') +
       '<th class="n">Net h</th><th class="n">Lunch m</th><th class="n">Break m</th></tr>' + (rows || '<tr><td colspan="11" class="muted">No employees yet.</td></tr>') + '</table>' +
@@ -129,6 +130,7 @@
     window.scrollTo(0, scrollY);
   }
   function goTab(t) { st.tab = t; if (t === 'live') loadLive(); draw(); }
+  document.addEventListener('change', function (ev) { if (ev.target.id === 'wkRole' && A.currentScreen() === 'admin') { st.weekRole = ev.target.value; loadWeek(st.weekStart); } });
   document.addEventListener('click', function (ev) {
     if (A.currentScreen() !== 'admin') return;
     var t = ev.target.closest('[data-adtab]'); if (t) return goTab(t.dataset.adtab);
@@ -136,7 +138,7 @@
     if (ev.target.id === 'adRefresh') return loadLive();
     var w = ev.target.closest('[data-wk]'); if (w && st.week) { st.weekStart = X.addDays(st.week.week_start_sun, +w.dataset.wk); return loadWeek(st.weekStart); }
     if (ev.target.id === 'wkTest') { st.weekTest = ev.target.checked; return loadWeek(st.weekStart); }
-    var tx = st.weekTest ? '-INCLUDING-TEST' : '';
+    var tx = (st.weekRole ? '-' + st.weekRole : '') + (st.weekTest ? '-INCLUDING-TEST' : '');
     if (ev.target.id === 'csvHours' && st.week) return download('weave-time-hours-' + st.week.week_start_sun + tx + '.csv', X.weekCsv(st.week));
     if (ev.target.id === 'csvPunches' && st.week) return call('admin_punches', { week_start: st.week.week_start_sun }).then(function (j) { download('weave-time-punches-' + st.week.week_start_sun + tx + '.csv', X.punchesCsv(j.punches.filter(function (p) { return st.weekTest || p.is_test !== 'TRUE'; }))); }, fail);
     var g = ev.target.closest('[data-goto-tl]'); if (g && window.WTAdmin.openTimeline) return window.WTAdmin.openTimeline(g.dataset.gotoTl, g.dataset.sid);

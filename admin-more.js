@@ -1,4 +1,4 @@
-/* Weave Time — admin view part 2: Timeline (location history per clock-in session), Punches (edit / void / add missed), Employees. */
+/* Weave Time — admin view part 2: Timeline (location history per clock-in session), Punches (edit / void / add missed). Employees is in admin-people.js. */
 (function () {
   'use strict';
   var A = window.WTApp, X = window.WTA, W = window.WTAdmin; if (!W) return;
@@ -7,7 +7,7 @@
   function ok(msg) { A.flash(msg); }
   function users() {
     if (st.users) return Promise.resolve(st.users);
-    return W.call('admin_list_users').then(function (j) { st.users = j.users; return j.users; });
+    return W.call('admin_list_users').then(function (j) { st.users = j.users; st.roleCat = j.roles_catalog || null; return j.users; });
   }
   function staff() { return (st.users || []).filter(function (u) { return u.role !== 'admin'; }); }
   function empOptions(sel, extra) {
@@ -15,6 +15,7 @@
   }
   function typeOptions(sel) { return Object.keys(TYPES).map(function (t) { return '<option value="' + t + '"' + (t === sel ? ' selected' : '') + '>' + esc(TYPES[t]) + '</option>'; }).join(''); }
   function need(fn) { if (!st.users) { users().then(W.draw, W.fail); return '<p class="muted">Loading…</p>'; } return fn(); }
+  W.users = users; W.need = need;
 
   // ===== Timeline =====
   function loadSessions() {
@@ -104,31 +105,6 @@
     return W.call('admin_edit_punch', { punch_id: id, updates: updates, edit_reason: reason }).then(function () { pu.editing = ''; st.week = null; st.live = null; ok('Punch updated.'); loadPunches(); }, W.fail);
   }
 
-  // ===== Employees =====
-  views.employees = function () {
-    return need(function () {
-      var me = (A.me() || {}).email;
-      return '<details class="ad-card ad-f"><summary><b>Add an employee</b></summary><form id="nuForm"><label for="nuName">Full name</label><input id="nuName" required maxlength="120">' +
-        '<label for="nuEmail">Email (their sign-in)</label><input id="nuEmail" type="email" required autocomplete="off"><label for="nuId">Employee ID (optional)</label><input id="nuId" maxlength="60">' +
-        '<label for="nuPass">Temporary password (they must change it at first sign-in)</label><input id="nuPass" type="password" value="WeaveMeIn" minlength="6" required autocomplete="new-password">' +
-        '<label for="nuRole">Role</label><select id="nuRole"><option value="employee">Employee (clocks in/out)</option><option value="driver">Driver (clock + route forms)</option><option value="admin">Admin (sees everything, no clock)</option></select>' +
-        '<div class="row"><button class="go" type="submit">Create account</button></div></form></details>' +
-        st.users.map(function (u) {
-          var self = u.email === me;
-          return '<div class="ad-card"><div class="ad-row"><span class="ad-grow"><b>' + esc(u.full_name) + '</b>' + (u.employee_id ? ' <span class="muted">· ' + esc(u.employee_id) + '</span>' : '') + '<br><span class="muted">' + esc(u.email) + '</span></span>' +
-            '<span class="pill ' + (u.role === 'admin' ? 'p-lunch' : u.role === 'driver' ? 'p-on' : '') + '">' + esc(u.role) + '</span>' + (u.active ? '' : '<span class="pill p-bad">inactive</span>') + (u.must_change_password ? '<span class="pill">temp password</span>' : '') + '</div>' +
-            '<div class="muted">Last sign-in: ' + (u.last_login_utc ? esc(X.ctLabel(u.last_login_utc)) : 'never') + '</div>' +
-            '<div class="ad-row" style="margin-top:.4rem"><button class="ghost btn-s" type="button" data-reset="' + esc(u.email) + '">Reset password</button>' +
-            (self ? '<span class="muted">(you)</span>' : '<button class="ghost btn-s" type="button" data-active="' + esc(u.email) + '" data-to="' + (u.active ? 'false' : 'true') + '">' + (u.active ? 'Deactivate' : 'Reactivate') + '</button>' +
-              ['employee', 'driver', 'admin'].filter(function (r) { return r !== u.role; }).map(function (r) { return '<button class="ghost btn-s" type="button" data-role="' + esc(u.email) + '" data-to="' + r + '">Make ' + r + '</button>'; }).join('') +
-              '<button class="ghost btn-s" type="button" data-remove="' + esc(u.email) + '" style="color:#a32020">Remove</button>') + '</div>' +
-            (st.resetFor === u.email ? '<form class="ad-f" data-resetform="' + esc(u.email) + '"><label>New temporary password</label><input name="pw" type="password" value="WeaveMeIn" minlength="6" required autocomplete="new-password">' +
-              '<div class="row"><button class="ghost" type="button" data-resetcancel="1">Cancel</button><button class="go" type="submit">Reset — signs them out</button></div></form>' : '') + '</div>';
-        }).join('');
-    });
-  };
-  function reloadUsers(msg) { st.users = null; st.resetFor = ''; if (msg) ok(msg); users().then(W.draw, W.fail); }
-
   // ===== events =====
   document.addEventListener('change', function (ev) {
     if (A.currentScreen() !== 'admin') return; var id = ev.target.id;
@@ -145,11 +121,6 @@
     if (d.editcancel) { pu.editing = ''; return W.draw(); }
     if (d['void']) { var r = window.prompt('Reason for voiding this punch (kept in the audit trail):'); if (r && r.trim().length >= 3) editPunch(d['void'], { status: 'void' }, r.trim()); else if (r !== null) A.flash('A reason (3+ characters) is required.', true); return; }
     if (d.restore) { var r2 = window.prompt('Reason for restoring this punch:'); if (r2 && r2.trim().length >= 3) editPunch(d.restore, { status: 'edited' }, r2.trim()); return; }
-    if (d.reset) { st.resetFor = d.reset; return W.draw(); }
-    if (d.resetcancel) { st.resetFor = ''; return W.draw(); }
-    if (d.active) return W.call('admin_set_active', { email: d.active, active: d.to === 'true' }).then(function () { reloadUsers(d.to === 'true' ? 'Reactivated.' : 'Deactivated — they can no longer sign in.'); }, W.fail);
-    if (d.role) { if (!window.confirm('Change ' + d.role + ' to ' + d.to + '?')) return; return W.call('admin_set_role', { email: d.role, role: d.to }).then(function () { reloadUsers('Role updated.'); }, W.fail); }
-    if (d.remove) { if (!window.confirm('Remove ' + d.remove + '? Their punches stay in the sheet; they can no longer sign in.')) return; return W.call('admin_delete_user', { email: d.remove }).then(function () { reloadUsers('Removed.'); }, W.fail); }
   });
   document.addEventListener('submit', function (ev) {
     if (A.currentScreen() !== 'admin') return; var f = ev.target; ev.preventDefault();
@@ -164,11 +135,6 @@
       if (f.elements.when.value !== f.elements.when.dataset.orig) up.timestamp_utc = w;   // unchanged time keeps its exact seconds
       return editPunch(f.dataset.editform, up, f.elements.reason.value.trim());
     }
-    if (f.id === 'nuForm') {
-      return W.call('admin_create_user', { full_name: $('nuName').value.trim(), email: $('nuEmail').value.trim().toLowerCase(), employee_id: $('nuId').value.trim(), initial_password: $('nuPass').value, role: $('nuRole').value })
-        .then(function (j) { reloadUsers('Account created for ' + j.email + '. They sign in with the temporary password and must change it.'); }, W.fail);
-    }
-    if (f.dataset.resetform) return W.call('admin_reset_password', { email: f.dataset.resetform, initial_password: f.elements.pw.value }).then(function () { reloadUsers('Password reset. They must change it at next sign-in.'); }, W.fail);
   });
   A.on('render', function (sc) { if (sc === 'login') { st.users = null; tl.email = tl.sid = ''; tl.sessions = tl.points = null; pu.list = null; pu.email = pu.week = pu.editing = ''; } });
 })();
