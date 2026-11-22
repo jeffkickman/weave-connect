@@ -52,6 +52,7 @@ t('pingDue: only signed-in employees, on the clock, app visible, every 3 min', (
   assert.strictEqual(P.pingDue({ ...base, state: 'off' }), false);
   assert.strictEqual(P.pingDue({ ...base, visible: false }), false);
   assert.strictEqual(P.pingDue({ ...base, role: 'admin' }), false);
+  assert.strictEqual(P.pingDue({ ...base, role: 'admin', testClock: true }), true, 'v6: admin Test clock pings (stored under a TEST session)');
   assert.strictEqual(P.pingDue({ ...base, signedIn: false }), false);
   assert.strictEqual(P.pingDue({ ...base, mustChange: true }), false);
   assert.strictEqual(P.pingDue({ ...base, authNeeded: true }), false);
