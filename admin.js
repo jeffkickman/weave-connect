@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var A = window.WTApp, X = window.WTA, S = A.settings, $ = function (id) { return document.getElementById(id); }, esc = A.esc;
-  var TABS = [['live', 'Live'], ['week', 'Week'], ['timeline', 'Timeline'], ['punches', 'Punches'], ['employees', 'Employees']];
+  var TABS = [['live', 'Live'], ['week', 'Week'], ['timeline', 'Timeline'], ['punches', 'Punches'], ['employees', 'Employees'], ['routes', 'Routes'], ['testdrv', 'Test driver']];
   var st = { tab: 'live', live: null, liveAt: 0, week: null, weekStart: '', users: null }, views = {}, mapsP = null, timer = null;
   var css = document.createElement('style');
   css.textContent = 'body.wide main{max-width:980px}body.wide .flash{pointer-events:none;opacity:.96}#adTabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:.5rem 0}#adTabs button{flex:1 1 30%;width:auto;min-width:5.5rem;padding:.55rem .4rem;font-size:.9rem}.ad-row button,.ad-row a{width:auto}' +
@@ -65,7 +65,7 @@
     var c = X.stateCounts(d.people), on = d.people.filter(function (p) { return p.state !== 'off'; }), off = d.people.filter(function (p) { return p.state === 'off'; });
     var card = function (p) {
       var l = p.location, where = l ? esc(l.location_description || (l.latitude + ', ' + l.longitude)) : '';
-      return '<div class="ad-card"><div class="ad-row"><b class="ad-grow">' + esc(p.full_name) + (p.employee_id ? ' <span class="muted">· ' + esc(p.employee_id) + '</span>' : '') + '</b>' + pill(p.state) + '</div>' +
+      return '<div class="ad-card"><div class="ad-row"><b class="ad-grow">' + esc(p.full_name) + (p.employee_id ? ' <span class="muted">· ' + esc(p.employee_id) + '</span>' : '') + '</b>' + (p.is_test ? '<span class="pill p-bad">TEST shift</span>' : '') + pill(p.state) + '</div>' +
         '<div class="muted">' + (p.since_utc ? 'Since ' + esc(X.ctTime(p.since_utc)) + ' · ' : '') + 'Today ' + p.today_hours.toFixed(2) + ' h · Week ' + p.week_hours.toFixed(2) + ' h</div>' +
         (l ? '<div class="ad-row" style="margin-top:.35rem">' + onsitePill(l.onsite_status) + '<span class="ad-grow">' + where + (l.distance_m !== '' ? ' <span class="muted">(' + esc(l.distance_m) + ' m from office)</span>' : '') +
           '<br><span class="muted">' + (l.source === 'punch' ? 'From last punch' : 'Live update') + ' · ' + X.ageLabel(l.age_seconds) + (l.accuracy_m ? ' · ±' + esc(l.accuracy_m) + ' m' : '') + '</span></span>' + mapsBtn(l.maps_link) + '</div>'
@@ -93,7 +93,7 @@
   // ===== Week =====
   function loadWeek(ws) {
     st.week = null; st.weekLoading = true; if (st.tab === 'week') draw();
-    return call('admin_week_report', ws ? { week_start: ws } : {}).then(function (j) { st.weekLoading = false; st.week = j; st.weekStart = j.week_start_sun; if (st.tab === 'week') draw(); },
+    return call('admin_week_report', { week_start: ws || '', include_test: !!st.weekTest }).then(function (j) { st.weekLoading = false; st.week = j; st.weekStart = j.week_start_sun; if (st.tab === 'week') draw(); },
       function (e) { st.weekLoading = false; fail(e); });
   }
   views.week = function () {
@@ -111,7 +111,8 @@
     var guests = (r.guests || []).map(function (g) { return '<tr><td>' + esc(g.employee_name) + ' <span class="pill p-bad">GUEST</span></td><td>' + esc(g.punch_type) + '</td><td>' + esc(g.local_time_ct) + '</td><td>' + esc(g.guest_note) + (g.note ? ' — ' + esc(g.note) : '') + '</td></tr>'; }).join('');
     return '<div class="ad-row"><button class="ghost btn-s" data-wk="-7" type="button">‹ Prev</button><b class="ad-grow" style="text-align:center">Week ' + esc(A.dayLabel(r.week_start_sun)) + ' – ' + esc(A.dayLabel(r.week_end_sat)) + '</b>' +
       '<button class="ghost btn-s" data-wk="7" type="button">Next ›</button></div>' +
-      '<div class="ad-row" style="margin:.5rem 0"><button class="go btn-s" id="csvHours" type="button">Download hours CSV</button><button class="ghost btn-s" id="csvPunches" type="button">Download punches CSV</button></div>' +
+      '<div class="ad-row" style="margin:.5rem 0"><button class="go btn-s" id="csvHours" type="button">Download hours CSV</button><button class="ghost btn-s" id="csvPunches" type="button">Download punches CSV</button><label style="margin:0"><input type="checkbox" id="wkTest" style="width:auto"' + (st.weekTest ? ' checked' : '') + '> Include TEST shifts</label></div>' +
+      (st.weekTest ? '<div class="banner">Including TEST shifts — not for payroll.</div>' : '') +
       '<div class="ad-card ad-scroll"><table class="ad-tbl"><tr><th>Employee</th>' + dates.map(function (d) { return '<th class="n">' + esc(A.dayLabel(d).split(',')[0]) + '</th>'; }).join('') +
       '<th class="n">Net h</th><th class="n">Lunch m</th><th class="n">Break m</th></tr>' + (rows || '<tr><td colspan="11" class="muted">No employees yet.</td></tr>') + '</table>' +
       '<p class="muted">Central time, Sun–Sat. Lunch unpaid (subtracted); breaks paid (included).</p></div>' +
@@ -134,8 +135,10 @@
     var p = ev.target.closest('[data-proxy]'); if (p) return $(p.dataset.proxy).click();
     if (ev.target.id === 'adRefresh') return loadLive();
     var w = ev.target.closest('[data-wk]'); if (w && st.week) { st.weekStart = X.addDays(st.week.week_start_sun, +w.dataset.wk); return loadWeek(st.weekStart); }
-    if (ev.target.id === 'csvHours' && st.week) return download('weave-time-hours-' + st.week.week_start_sun + '.csv', X.weekCsv(st.week));
-    if (ev.target.id === 'csvPunches' && st.week) return call('admin_punches', { week_start: st.week.week_start_sun }).then(function (j) { download('weave-time-punches-' + st.week.week_start_sun + '.csv', X.punchesCsv(j.punches)); }, fail);
+    if (ev.target.id === 'wkTest') { st.weekTest = ev.target.checked; return loadWeek(st.weekStart); }
+    var tx = st.weekTest ? '-INCLUDING-TEST' : '';
+    if (ev.target.id === 'csvHours' && st.week) return download('weave-time-hours-' + st.week.week_start_sun + tx + '.csv', X.weekCsv(st.week));
+    if (ev.target.id === 'csvPunches' && st.week) return call('admin_punches', { week_start: st.week.week_start_sun }).then(function (j) { download('weave-time-punches-' + st.week.week_start_sun + tx + '.csv', X.punchesCsv(j.punches.filter(function (p) { return st.weekTest || p.is_test !== 'TRUE'; }))); }, fail);
     var g = ev.target.closest('[data-goto-tl]'); if (g && window.WTAdmin.openTimeline) return window.WTAdmin.openTimeline(g.dataset.gotoTl, g.dataset.sid);
   });
   var lastSc = '';

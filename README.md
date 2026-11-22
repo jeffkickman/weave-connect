@@ -28,8 +28,10 @@ Open that link on any phone. Add to Home Screen:
 - Every punch is auto-sent (with retry) to a private Google Sheet via a Google Apps Script web app (`staff-config.js` holds the endpoint URL). Employees see only Onsite / Offsite / Location unavailable.
 - While an employee is on the clock and the app is open, it sends a location update about every 3 minutes (the screen says "While you're clocked in, your location is shared with Jeff."). Employees never see coordinates or addresses.
 - **Admin view** (accounts with role `admin`, e.g. Jeff): Live (who is on the clock, where, map), Week (hours + CSV download), Timeline (location history per clock-in session, grouped into stops), Punches (edit / void / add a missed punch, all audited), Employees (add, reset password, deactivate, remove, role). Admins don't clock in.
+- **Drivers** (role `driver`): after Clock In a Start Route form appears (route, vehicle, start mileage, packages, totes, oversize/overflow, stops, required Real/Test choice); then End Route (end mileage, delivered, returned + reason, missing/damaged + note, stops). Miles and a count check are computed; drafts and unsent routes stay on the phone and retry like punches (`driver-core.js`, `driver.js`). Each route is one row in the private Sheet's `Routes` tab; Atlas posts the start/finish text to Chat. TEST routes and test shifts are labeled TEST, left out of hours/CSV by default, and never posted.
+- Admin **Routes** tab (today / week, start + finish numbers, post status, CSV, audited edits) and **Test driver** tab (the driver form; everything saved there is TEST) in `admin-routes.js`.
 - Every password field has a Show/Hide toggle (`staff-pw.js`).
-- Icons are generated at deploy time by `tools/make-icons.py`. Logic tests: `node tools/test-staff-core.js` and `node tools/test-admin.js`.
+- Icons are generated at deploy time by `tools/make-icons.py`. Logic tests: `node tools/test-staff-core.js`, `node tools/test-admin.js`, `node tools/test-driver-core.js`.
 
 ## What it does
 - Weave a resource in (program, class, company, need)

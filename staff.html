@@ -23,7 +23,7 @@
     .card { background:#fff; border-radius:14px; padding:1rem; margin-bottom:1rem; box-shadow:0 1px 0 rgba(11,31,58,.08); }
     h2 { margin:.1rem 0 .6rem; font-size:1.05rem; }
     label { display:block; font-size:.8rem; color:var(--muted); margin:.6rem 0 .2rem; }
-    input, textarea { width:100%; padding:.75rem; border:1px solid #d7d1c6; border-radius:10px; font:inherit; font-size:1rem; }
+    input, textarea, select { width:100%; padding:.75rem; border:1px solid #d7d1c6; border-radius:10px; font:inherit; font-size:1rem; }
     button { width:100%; margin-top:.55rem; padding:.9rem; border:0; border-radius:12px; font-weight:700; font-size:1.05rem; cursor:pointer; }
     button:disabled { opacity:.5; }
     .big { padding:1.3rem; font-size:1.35rem; }
@@ -145,6 +145,7 @@
           <p id="sync" class="sync" aria-live="polite"></p>
           <p id="locNote" class="muted" hidden></p>
         </div>
+        <div class="card" id="drvCard" data-drvbox="driver" hidden></div>
         <div class="card">
           <h2>Today <span class="muted" id="todayHrs"></span></h2>
           <ul class="pl" id="today"></ul>
@@ -201,8 +202,11 @@
   <script src="staff-auth.js"></script>
   <script src="staff-pw.js"></script>
   <script src="staff-ping.js"></script>
+  <script src="driver-core.js"></script>
+  <script src="driver.js"></script>
   <script src="admin-core.js"></script>
   <script src="admin.js"></script>
   <script src="admin-more.js"></script>
+  <script src="admin-routes.js"></script>
 </body>
 </html>
