@@ -62,7 +62,7 @@
     return csv(rows);
   }
   function punchesCsv(ps) {
-    var cols = ['punch_id', 'record_type', 'employee_name', 'employee_id', 'employee_email', 'punch_type', 'local_time_ct', 'timestamp_utc', 'week_start_sun', 'onsite_status', 'distance_m', 'location_description', 'latitude', 'longitude', 'note', 'guest_note', 'source', 'status', 'edited_by', 'edited_at_utc', 'edit_reason', 'session_id'];
+    var cols = ['punch_id', 'record_type', 'employee_name', 'employee_id', 'employee_email', 'punch_type', 'local_time_ct', 'timestamp_utc', 'week_start_sun', 'onsite_status', 'distance_m', 'location_description', 'latitude', 'longitude', 'note', 'guest_note', 'source', 'status', 'edited_by', 'edited_at_utc', 'edit_reason', 'session_id', 'is_test'];
     return csv([cols].concat(ps.map(function (p) { return cols.map(function (c) { return p[c]; }); })));
   }
   function stateCounts(people) { var c = { on: 0, lunch: 0, 'break': 0, off: 0 }; people.forEach(function (p) { c[p.state] = (c[p.state] || 0) + 1; }); return c; }

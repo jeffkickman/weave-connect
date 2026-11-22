@@ -164,7 +164,9 @@
   }
   function assign(o, x) { for (var k in x) if (Object.prototype.hasOwnProperty.call(x, k)) o[k] = x[k]; return o; }
   function buildPayload(p, appKey, sessionToken) {
-    return assign(assign({ action: 'punch', appKey: appKey, sessionToken: sessionToken || '' }, punchFields(p)), { source: 'weave-time-web' });
+    var b = assign(assign({ action: 'punch', appKey: appKey, sessionToken: sessionToken || '' }, punchFields(p)), { source: 'weave-time-web' });
+    if (p.isTest) b.is_test = true;
+    return b;
   }
   function buildGuestPayload(p, appKey) {
     return assign(assign({ action: 'guest_punch', appKey: appKey, guest_name: p.guestName || '', guest_note: p.guestNote || '' }, punchFields(p)),

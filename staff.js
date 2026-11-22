@@ -88,6 +88,7 @@
     var e = me();
     capture(type, function (rec) {
       rec.ownerEmail = e.email; rec.name = e.full_name; rec.empId = e.employee_id || '';
+      if (type === 'clock_in' && window.WTDriver && window.WTDriver.testShift()) rec.isTest = true;
       db.punches.push(rec); save();
       flash(WT.TYPES[rec.type] + ' saved at ' + shortTime(rec.ts) + ' — ' + WT.locationLabel(rec));
       render();
@@ -146,7 +147,7 @@
   function punchRow(p) {
     var lab = WT.locationLabel(p), cls = lab === 'Onsite' ? 'on' : lab === 'Offsite' ? 'off' : 'na';
     return '<li><b>' + shortTime(p.ts) + '</b> ' + esc(WT.TYPES[p.type]) + ' <span class="tag ' + cls + '">' + lab + '</span>' +
-      (p.status === 'edited' ? ' <span class="tag na">corrected</span>' : '') + (p.note ? '<div class="note">“' + esc(p.note) + '”</div>' : '') + '</li>';
+      (p.status === 'edited' ? ' <span class="tag na">corrected</span>' : '') + (p.isTest ? ' <span class="tag off">TEST</span>' : '') + (p.note ? '<div class="note">“' + esc(p.note) + '”</div>' : '') + '</li>';
   }
   function weekBlock(ps, wk, open) {
     var s = WT.weekSummary(ps, wk, Date.now(), C.TIMEZONE);

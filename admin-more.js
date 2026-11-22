@@ -93,7 +93,7 @@
       '<label>Date &amp; time (Central)</label><input name="when" type="datetime-local" data-orig="' + esc(X.utcToCtInput(p.timestamp_utc)) + '" value="' + esc(X.utcToCtInput(p.timestamp_utc)) + '" required><label>Note</label><input name="note" value="' + esc(p.note) + '" maxlength="300">' +
       '<label>Reason for the change (required)</label><input name="reason" required minlength="3" maxlength="300"><div class="row"><button class="ghost" type="button" data-editcancel="1">Cancel</button><button class="go" type="submit">Save</button></div></form>';
     var guest = p.record_type === 'GUEST';
-    return '<div class="ad-card"><div class="ad-row"><span class="ad-grow"><b>' + esc(X.ctLabel(p.timestamp_utc)) + '</b> · ' + esc(TYPES[p.punch_type] || p.punch_type) + '<br>' + esc(p.employee_name) + (guest ? ' <span class="pill p-bad">GUEST</span>' : '') +
+    return '<div class="ad-card"><div class="ad-row"><span class="ad-grow"><b>' + esc(X.ctLabel(p.timestamp_utc)) + '</b> · ' + esc(TYPES[p.punch_type] || p.punch_type) + '<br>' + esc(p.employee_name) + (guest ? ' <span class="pill p-bad">GUEST</span>' : '') + (p.is_test === 'TRUE' ? ' <span class="pill p-bad">TEST</span>' : '') +
       (p.status === 'void' ? ' <span class="pill p-bad">void</span>' : p.status === 'edited' ? ' <span class="pill">edited by ' + esc(p.edited_by) + '</span>' : '') + (p.source === 'admin' ? ' <span class="pill">added</span>' : '') + '</span>' + W.onsitePill(p.onsite_status) + W.mapsBtn(p.maps_link, 'Map') + '</div>' +
       (p.location_description ? '<div class="muted">' + esc(p.location_description) + '</div>' : '') + (p.note ? '<div class="note">“' + esc(p.note) + '”</div>' : '') + (guest && p.guest_note ? '<div class="note">Guest: ' + esc(p.guest_note) + '</div>' : '') +
       (p.edit_reason ? '<div class="muted">Reason: ' + esc(p.edit_reason) + '</div>' : '') +
@@ -111,16 +111,16 @@
       return '<details class="ad-card ad-f"><summary><b>Add an employee</b></summary><form id="nuForm"><label for="nuName">Full name</label><input id="nuName" required maxlength="120">' +
         '<label for="nuEmail">Email (their sign-in)</label><input id="nuEmail" type="email" required autocomplete="off"><label for="nuId">Employee ID (optional)</label><input id="nuId" maxlength="60">' +
         '<label for="nuPass">Temporary password (they must change it at first sign-in)</label><input id="nuPass" type="password" value="WeaveMeIn" minlength="6" required autocomplete="new-password">' +
-        '<label for="nuRole">Role</label><select id="nuRole"><option value="employee">Employee (clocks in/out)</option><option value="admin">Admin (sees everything, no clock)</option></select>' +
+        '<label for="nuRole">Role</label><select id="nuRole"><option value="employee">Employee (clocks in/out)</option><option value="driver">Driver (clock + route forms)</option><option value="admin">Admin (sees everything, no clock)</option></select>' +
         '<div class="row"><button class="go" type="submit">Create account</button></div></form></details>' +
         st.users.map(function (u) {
           var self = u.email === me;
           return '<div class="ad-card"><div class="ad-row"><span class="ad-grow"><b>' + esc(u.full_name) + '</b>' + (u.employee_id ? ' <span class="muted">· ' + esc(u.employee_id) + '</span>' : '') + '<br><span class="muted">' + esc(u.email) + '</span></span>' +
-            '<span class="pill ' + (u.role === 'admin' ? 'p-lunch' : '') + '">' + esc(u.role) + '</span>' + (u.active ? '' : '<span class="pill p-bad">inactive</span>') + (u.must_change_password ? '<span class="pill">temp password</span>' : '') + '</div>' +
+            '<span class="pill ' + (u.role === 'admin' ? 'p-lunch' : u.role === 'driver' ? 'p-on' : '') + '">' + esc(u.role) + '</span>' + (u.active ? '' : '<span class="pill p-bad">inactive</span>') + (u.must_change_password ? '<span class="pill">temp password</span>' : '') + '</div>' +
             '<div class="muted">Last sign-in: ' + (u.last_login_utc ? esc(X.ctLabel(u.last_login_utc)) : 'never') + '</div>' +
             '<div class="ad-row" style="margin-top:.4rem"><button class="ghost btn-s" type="button" data-reset="' + esc(u.email) + '">Reset password</button>' +
             (self ? '<span class="muted">(you)</span>' : '<button class="ghost btn-s" type="button" data-active="' + esc(u.email) + '" data-to="' + (u.active ? 'false' : 'true') + '">' + (u.active ? 'Deactivate' : 'Reactivate') + '</button>' +
-              '<button class="ghost btn-s" type="button" data-role="' + esc(u.email) + '" data-to="' + (u.role === 'admin' ? 'employee' : 'admin') + '">' + (u.role === 'admin' ? 'Make employee' : 'Make admin') + '</button>' +
+              ['employee', 'driver', 'admin'].filter(function (r) { return r !== u.role; }).map(function (r) { return '<button class="ghost btn-s" type="button" data-role="' + esc(u.email) + '" data-to="' + r + '">Make ' + r + '</button>'; }).join('') +
               '<button class="ghost btn-s" type="button" data-remove="' + esc(u.email) + '" style="color:#a32020">Remove</button>') + '</div>' +
             (st.resetFor === u.email ? '<form class="ad-f" data-resetform="' + esc(u.email) + '"><label>New temporary password</label><input name="pw" type="password" value="WeaveMeIn" minlength="6" required autocomplete="new-password">' +
               '<div class="row"><button class="ghost" type="button" data-resetcancel="1">Cancel</button><button class="go" type="submit">Reset — signs them out</button></div></form>' : '') + '</div>';
