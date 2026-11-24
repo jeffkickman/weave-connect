@@ -22,7 +22,7 @@
       var me = (A.me() || {}).email;
       return '<details class="ad-card ad-f"><summary><b>Add an employee</b></summary><form id="nuForm"><label for="nuName">Full name</label><input id="nuName" required maxlength="120">' +
         '<label for="nuEmail">Email (their sign-in)</label><input id="nuEmail" type="email" required autocomplete="off"><label for="nuId">Employee ID (optional)</label><input id="nuId" maxlength="60">' +
-        '<label for="nuPass">Temporary password (they must change it at first sign-in)</label><input id="nuPass" type="password" value="WeaveMeIn" minlength="6" required autocomplete="new-password">' +
+        '<label for="nuPass">Temporary password (they must change it at first sign-in)</label><input id="nuPass" type="password" value="WeaveMeIn" required autocomplete="new-password">' +
         '<label>Roles' + (multi() ? ' (pick one or more)' : '') + '</label>' + boxes('nuRoles', ['employee'], false) +
         '<div class="row"><button class="go" type="submit">Create account</button></div></form></details>' +
         (multi() ? '<details class="ad-card ad-f"><summary><b>Role list</b> <span class="muted">' + esc(cat().join(', ')) + '</span></summary><p class="muted">Add a new role here, then tick it on people. ' +
@@ -38,7 +38,7 @@
               '<button class="ghost btn-s" type="button" data-remove="' + esc(u.email) + '" style="color:#a32020">Remove</button>') + '</div>' +
             (st.roleFor === u.email ? '<form class="ad-f" data-roleform="' + esc(u.email) + '"><label>Roles for ' + esc(u.full_name) + '</label>' + boxes('r', rolesOf(u), self) +
               (self ? '<p class="muted">You can’t remove your own admin role.</p>' : '') + '<div class="row"><button class="ghost" type="button" data-rolecancel="1">Cancel</button><button class="go" type="submit">Save roles</button></div></form>' : '') +
-            (st.resetFor === u.email ? '<form class="ad-f" data-resetform="' + esc(u.email) + '"><label>New temporary password</label><input name="pw" type="password" value="WeaveMeIn" minlength="6" required autocomplete="new-password">' +
+            (st.resetFor === u.email ? '<form class="ad-f" data-resetform="' + esc(u.email) + '"><label>New temporary password</label><input name="pw" type="password" value="WeaveMeIn" required autocomplete="new-password">' +
               '<div class="row"><button class="ghost" type="button" data-resetcancel="1">Cancel</button><button class="go" type="submit">Reset — signs them out</button></div></form>' : '') + '</div>';
         }).join('');
     });

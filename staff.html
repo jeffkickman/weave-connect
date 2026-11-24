@@ -87,10 +87,10 @@
       <p class="muted">You signed in with a temporary password. Choose your own password before you can use the clock.</p>
       <form id="forceForm">
         <input type="text" autocomplete="username" hidden>
-        <label for="fNew">New password (at least 8 characters)</label>
-        <input id="fNew" type="password" autocomplete="new-password" minlength="8">
+        <label for="fNew">New password</label>
+        <input id="fNew" type="password" autocomplete="new-password" required>
         <label for="fConfirm">Confirm new password</label>
-        <input id="fConfirm" type="password" autocomplete="new-password" minlength="8">
+        <input id="fConfirm" type="password" autocomplete="new-password" required>
         <p class="err" id="forceErr" hidden></p>
         <button class="go" id="forceBtn" type="submit">Save new password</button>
       </form>
@@ -188,10 +188,10 @@
           <input type="text" autocomplete="username" hidden>
           <label for="pCur">Current password</label>
           <input id="pCur" type="password" autocomplete="current-password">
-          <label for="pNew">New password (at least 8 characters)</label>
-          <input id="pNew" type="password" autocomplete="new-password" minlength="8">
+          <label for="pNew">New password</label>
+          <input id="pNew" type="password" autocomplete="new-password" required>
           <label for="pConfirm">Confirm new password</label>
-          <input id="pConfirm" type="password" autocomplete="new-password" minlength="8">
+          <input id="pConfirm" type="password" autocomplete="new-password" required>
           <p class="err" id="pwErr" hidden></p>
           <div class="row"><button class="ghost" id="pwCancel" type="button">Cancel</button><button class="go" id="pwBtn" type="submit">Change password</button></div>
         </form>

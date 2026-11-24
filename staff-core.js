@@ -174,7 +174,7 @@
   }
   function guestOk(name, note) { return (name || '').trim().length >= 2 && (note || '').trim().length >= 4; }
   function passwordProblem(pw, confirm) {
-    if ((pw || '').length < 8) return 'Password must be at least 8 characters.';
+    if (!(pw || '')) return 'Enter a new password.';
     if (pw !== confirm) return 'The two new passwords do not match.';
     return '';
   }
