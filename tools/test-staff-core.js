@@ -70,7 +70,9 @@ t('guest payload (contract: action=guest_punch)', () => {
   assert(!WT.guestOk('', 'New hire')); assert(!WT.guestOk('Jo Do', 'abc')); assert(WT.guestOk('Jo Do', 'abcd'));
 });
 t('password rules', () => {
-  assert(WT.passwordProblem('short', 'short')); assert(WT.passwordProblem('longenough1', 'longenough2'));
+  assert(WT.passwordProblem('', '')); assert(WT.passwordProblem('', 'x'));
+  assert(WT.passwordProblem('short', 'other'));
+  assert.strictEqual(WT.passwordProblem('short', 'short'), '');
   assert.strictEqual(WT.passwordProblem('longenough1', 'longenough1'), '');
 });
 t('employee-facing location label never leaks coords', () => {
