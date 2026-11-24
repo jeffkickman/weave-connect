@@ -31,6 +31,19 @@
   function me() { return db.session && db.session.employee ? db.session.employee : null; }
   function myEmail() { var e = me(); return e ? e.email : ''; }
   function myPunches() { return WT.forOwner(db.punches, myEmail()); }
+  function inTestMode() { return WT.inTestMode(db, me()); }
+  function modePs() { return WT.modePunches(myPunches(), inTestMode()); }
+  function realPs() { return WT.modePunches(myPunches(), false); }
+  function applyTestChrome() {
+    var sc = currentScreen(), on = sc === 'app' && inTestMode(), adm = !!(me() && me().role === 'admin');
+    document.body.classList.toggle('test-mode', on);
+    var bar = $('testBar'), enter = $('testEnter'), exit = $('testExit'), back = $('tcBack');
+    if (bar) bar.hidden = !on;
+    if (enter) enter.hidden = sc !== 'app' || on || adm;
+    if (exit) exit.hidden = !on || adm;
+    if (back) back.hidden = !(on && adm);
+    if ($('noteSave')) $('noteSave').textContent = on ? 'Submit TEST punch' : 'Save punch';
+  }
 
   // ===== location + note gate (shared by employee and guest punches) =====
   function getLocation() {
@@ -84,14 +97,13 @@
   $('noteCancel').onclick = function () { pendingCapture = null; $('notePanel').hidden = true; flash('Punch cancelled — nothing saved.', true); };
 
   function employeePunch(type) {
-    if (!WT.canPunch(myPunches(), type)) return flash('That punch is not allowed right now.', true);
+    if (!WT.canPunch(modePs(), type)) return flash('That punch is not allowed right now.', true);
     var e = me();
     capture(type, function (rec) {
       rec.ownerEmail = e.email; rec.name = e.full_name; rec.empId = e.employee_id || '';
-      if (type === 'clock_in' && window.WTDriver && window.WTDriver.testShift()) rec.isTest = true;
-      if (e.role === 'admin') rec.isTest = true;
+      if (inTestMode()) rec.isTest = true;
       db.punches.push(rec); save();
-      flash(WT.TYPES[rec.type] + ' saved at ' + shortTime(rec.ts) + ' — ' + WT.locationLabel(rec));
+      flash(WT.TYPES[rec.type] + ' saved' + (rec.isTest ? ' (TEST)' : '') + ' at ' + shortTime(rec.ts) + ' — ' + WT.locationLabel(rec));
       render();
     });
   }
@@ -169,36 +181,48 @@
     ['login', 'force', 'guest', 'guestDone', 'app', 'admin'].forEach(function (id) { $(id).hidden = id !== sc; });
     emit('render', sc);
     renderSync();
-    if (sc !== 'app') return;
-    var e = me(), ps = myPunches();
+    if (sc !== 'app') { applyTestChrome(); return; }
+    applyTestChrome();
+    var e = me(), ps = modePs(), real = realPs();
     $('meName').textContent = e.full_name + (e.employee_id ? ' · ID ' + e.employee_id : '');
     document.querySelectorAll('[data-tab]').forEach(function (b) { b.className = b.dataset.tab === view ? 'navy' : 'ghost'; });
     ['clock', 'week', 'history'].forEach(function (v) { $(v).hidden = v !== view; });
     var st = WT.stateOf(ps), nxt = WT.allowed(ps);
-    $('status').textContent = STATUS[st]; $('status').className = 'status s-' + st;
-    $('actions').innerHTML = nxt.map(function (t, i) { return '<button class="act ' + (i === 0 ? 'go big' : 'navy') + '" data-act="' + t + '">' + WT.TYPES[t] + '</button>'; }).join('');
-    var now = Date.now(), today = WT.dateKey(now), wk = WT.weekStart(now), s = WT.weekSummary(ps, wk, now, C.TIMEZONE);
+    $('status').textContent = STATUS[st] + (inTestMode() ? ' — TEST' : ''); $('status').className = 'status s-' + st;
+    $('actions').innerHTML = nxt.map(function (t, i) { return '<button class="act ' + (i === 0 ? 'go big' : 'navy') + '" data-act="' + t + '">' + (inTestMode() ? 'Submit TEST ' : '') + WT.TYPES[t] + '</button>'; }).join('');
+    var now = Date.now(), today = WT.dateKey(now), wk = WT.weekStart(now), s = WT.weekSummary(real, wk, now, C.TIMEZONE);
     var tp = WT.sortPunches(ps).filter(function (p) { return WT.dateKey(Date.parse(p.ts)) === today; });
-    $('today').innerHTML = tp.map(punchRow).join('') || '<li class="muted">No punches today.</li>';
+    $('today').innerHTML = tp.map(punchRow).join('') || '<li class="muted">No punches today' + (inTestMode() ? ' in test mode' : '') + '.</li>';
     var td = s.days.filter(function (d) { return d.date === today; })[0];
     $('todayHrs').textContent = td ? td.netHours.toFixed(2) + ' h today' : '';
     $('wkHrs').textContent = s.totals.netHours.toFixed(2) + ' h';
-    $('wkSub').textContent = 'Week ' + dayLabel(s.weekStart) + ' – ' + dayLabel(s.weekEnd) + ' · lunch ' + hm(s.totals.lunchMinutes) + ' · breaks ' + hm(s.totals.breakMinutes);
-    if (view === 'week') $('weekBody').innerHTML = weekBlock(ps, wk, true);
+    var ts = inTestMode() ? WT.weekSummary(ps, wk, now, C.TIMEZONE) : null;
+    $('wkSub').textContent = 'Week ' + dayLabel(s.weekStart) + ' – ' + dayLabel(s.weekEnd) + ' · lunch ' + hm(s.totals.lunchMinutes) + ' · breaks ' + hm(s.totals.breakMinutes) + (ts ? ' · TEST practice ' + ts.totals.netHours.toFixed(2) + ' h (not payroll)' : '');
+    if (view === 'week') $('weekBody').innerHTML = weekBlock(real, wk, true) + (inTestMode() ? '<p class="muted">Payroll hours above exclude TEST punches.</p>' + weekBlock(ps, wk, true) : '');
     if (view === 'history') {
-      var first = ps.length ? WT.weekStart(Date.parse(WT.sortPunches(ps)[0].ts)) : wk, out = [], w = wk;
-      for (var i = 0; i < 9 || w >= first; i++) { out.push(weekBlock(ps, w, false)); w = WT.addDays(w, -7); if (i > 200) break; }
+      var first = real.length ? WT.weekStart(Date.parse(WT.sortPunches(real)[0].ts)) : wk, out = [], w = wk;
+      for (var i = 0; i < 9 || w >= first; i++) { out.push(weekBlock(real, w, false)); w = WT.addDays(w, -7); if (i > 200) break; }
       $('histBody').innerHTML = out.join('');
     }
   }
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-tab]'); if (t) { view = t.dataset.tab; render(); }
     var a = ev.target.closest('[data-act]'); if (a && currentScreen() === 'app') employeePunch(a.dataset.act);
+    if (ev.target.id === 'testEnter') {
+      var msg = 'Enter test mode? Punches, routes and undelivered packages will be marked TEST and will not count toward hours, payroll, Live, group posts or disputes.';
+      if (WT.stateOf(realPs()) !== 'off') msg += ' You have a real shift open. Clock out first unless you want new punches marked TEST while that shift stays open.';
+      if (!window.confirm(msg)) return;
+      db.testMode = { email: me().email, on: true }; save(); flash('Test mode on — nothing you do now is real.'); render();
+    }
+    if (ev.target.id === 'testExit') {
+      if (WT.stateOf(modePs()) !== 'off' && !window.confirm('You have a TEST clock-in open. Exit anyway? Those TEST punches stay TEST and will not count. Clock out in test mode first if you want to close that practice shift.')) return;
+      db.testMode = { email: me().email, on: false }; save(); flash('Test mode off — punches and routes are real again.'); render();
+    }
   });
 
   window.WTApp = {
     db: function () { return db; }, save: save, api: api, render: render, flash: flash, capture: capture, syncAll: syncAll,
-    endpointReady: endpointReady, me: me, authLost: authLost, esc: esc, hm: hm, dayLabel: dayLabel, currentScreen: function () { return currentScreen(); }, shortTime: shortTime, setScreen: function (s) { screen = s; render(); },
+    endpointReady: endpointReady, me: me, authLost: authLost, esc: esc, hm: hm, dayLabel: dayLabel, currentScreen: function () { return currentScreen(); }, shortTime: shortTime, setScreen: function (s) { screen = s; render(); }, inTestMode: inTestMode,
     on: function (name, fn) { listeners.push([name, fn]); }, settings: S,
     start: function () {
       render(); syncAll();

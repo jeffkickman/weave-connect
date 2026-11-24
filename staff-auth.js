@@ -11,7 +11,9 @@
   function setSession(j, keepAuth) {
     var db = A.db();
     db.session = { token: j.sessionToken, expiresAt: j.expiresAt, mustChangePassword: !!j.mustChangePassword, employee: j.employee, authNeeded: false };
-    db.lastEmail = j.employee.email; A.save();
+    db.lastEmail = j.employee.email;
+    if (j.employee && j.employee.role !== 'admin') db.testMode = { email: j.employee.email, on: false };
+    A.save();
   }
   // Punches recorded by the older phone-only version (weavetime.v3) are adopted ONLY if that phone's saved name matches this account.
   function adoptLegacy() {

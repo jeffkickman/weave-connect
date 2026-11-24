@@ -226,12 +226,19 @@
     return [city, [st, j.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ').slice(0, 200);
   }
 
+
+  function inTestMode(db, emp) {
+    if (!emp) return false;
+    if (emp.role === 'admin') return true;
+    return !!(db && db.testMode && db.testMode.email === emp.email && db.testMode.on);
+  }
+  function modePunches(punches, test) { return (punches || []).filter(function (p) { return !!p.isTest === !!test; }); }
   var api = { CONFIG: CONFIG, TYPES: TYPES, stateOf: stateOf, allowed: allowed, canPunch: canPunch, haversineM: haversineM,
     assessLocation: assessLocation, noteOk: noteOk, dateKey: dateKey, weekStart: weekStart, addDays: addDays, midnight: midnight,
     localTime: localTime, intervals: intervals, dailyTotals: dailyTotals, weekSummary: weekSummary, sortPunches: sortPunches,
     newPunchId: newPunchId, onsiteStatus: onsiteStatus, locationLabel: locationLabel, buildPayload: buildPayload,
     buildGuestPayload: buildGuestPayload, guestOk: guestOk, passwordProblem: passwordProblem, normalizeTs: normalizeTs,
     mergeServerPunches: mergeServerPunches, forOwner: forOwner, pendingPunches: pendingPunches, markSynced: markSynced,
-    syncLabel: syncLabel, placeFromBDC: placeFromBDC };
+    syncLabel: syncLabel, placeFromBDC: placeFromBDC, inTestMode: inTestMode, modePunches: modePunches };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WT = api;
 })(this);
