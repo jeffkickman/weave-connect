@@ -6,7 +6,8 @@
   var PARSER_VERSION = 'p1';
   var REASONS = ['Business closed', 'No secure location', 'Customer unavailable / attended delivery', 'Access problem (gate/locked/no code)',
     'Address not found / bad address', 'Unsafe (dog, hazard)', 'Damaged package', 'Customer refused', 'Out of time / route ran long',
-    'Missing / could not locate package', 'Weather / road closed', 'Other (note required)'];
+    'Missing / could not locate package', 'Weather / road closed', 'Oversize / overweight (over 50 lb or over size limit)', 'Other (note required)'];
+  var REASON_HELP = { 'Oversize / overweight (over 50 lb or over size limit)': 'Amazon last-mile oversize / special handling: 50 lb or more; or 59 in long, 33 in wide, or 33 in high; or length + girth of 130 in or more (girth = 2 × (width + height)). TVs/monitors 40 in or longer.' };
   var DIGIT = { O: '0', Q: '0', D: '0', I: '1', L: '1', '|': '1', '!': '1', S: '5', B: '8', Z: '2' };
   // TBA + 12 digits; tolerate O/0 I/1 S/5 B/8 (and a few more) in the digit part, and T8A / 7BA for the prefix.
   function extractTba(text) {
@@ -35,7 +36,7 @@
   }
   var ODO = '(\\d{3,7}(?:\\.\\d)?)';
   var RULES = {
-    start: [['start_packages', both(LBL.pk)], ['start_stops', both(LBL.st)], ['overflow_count', both('overflow')], ['oversize_count', both('oversized?')],
+    start: [['start_packages', both(LBL.pk)], ['start_stops', both(LBL.st)], ['overflow_count', both('(?:overflow|oversized?)')],
       ['start_odometer', both('(?:odometer|odo|mileage)', ODO)]],
     end: [['delivered_packages', both('delivered')], ['returned_packages', both('(?:returned|returns|return to station|UNDLV)')],
       ['missing_packages', both('missing')], ['damaged_packages', both('damaged')],
@@ -83,6 +84,6 @@
     if (Object.keys(tv).length === 1) out.info.totes_or_bags = Object.keys(tv)[0];
     return out;
   }
-  var api = { PARSER_VERSION: PARSER_VERSION, REASONS: REASONS, extractTba: extractTba, normTba: normTba, tbaProblem: tbaProblem, parseScreens: parseScreens };
+  var api = { PARSER_VERSION: PARSER_VERSION, REASONS: REASONS, REASON_HELP: REASON_HELP, extractTba: extractTba, normTba: normTba, tbaProblem: tbaProblem, parseScreens: parseScreens };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WTOcr = api;
 })(this);

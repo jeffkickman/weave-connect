@@ -6,7 +6,7 @@
   'use strict';
   var A = window.WTApp, O = window.WTOcr, M = window.WTMedia, D = window.WTD; if (!A || !O || !M || !D) return;
   var esc = A.esc, st = {}, pending = null;
-  var LABELS = { start_packages: 'Total packages', start_stops: 'Stops', overflow_count: 'Overflow', oversize_count: 'Oversize', start_odometer: 'Starting mileage', route: 'Route',
+  var LABELS = { start_packages: 'Total packages', start_stops: 'Stops', overflow_count: 'Overflow', start_odometer: 'Starting mileage', route: 'Route',
     delivered_packages: 'Delivered', returned_packages: 'Returned / undelivered', missing_packages: 'Missing', damaged_packages: 'Damaged', successful_stops: 'Successful stops',
     unsuccessful_stops: 'Unsuccessful stops', end_odometer: 'Ending mileage' };
   function me() { return A.me() || {}; }

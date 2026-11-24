@@ -13,23 +13,22 @@
   function sum(a) { return a.reduce(function (x, y) { return x + (typeof y === 'number' && !isNaN(y) ? y : 0); }, 0); }
   function pick(sel, other) { return sel === 'Other' ? String(other || '').trim() : String(sel || '').trim(); }
 
-  // f = start draft: { route, routeOther, vehicle, vehicleOther, start_odometer, start_packages, totes:[{label,packages}], oversize_count, overflow_count, start_stops, start_note, mode:'real'|'test' }
+  // f = start draft: { route, routeOther, vehicle, vehicleOther, start_odometer, start_packages, totes:[{label,packages}], overflow_count, start_stops, start_note }
   function validateStart(f, allowTest, preview) {
     var e = [], tt = totes(f.totes);
     if (!pick(f.route, f.routeOther)) e.push('Choose the route.');
     if (!pick(f.vehicle, f.vehicleOther)) e.push('Choose the vehicle.');
     if (isNaN(odo(f.start_odometer))) e.push('Enter the starting mileage (odometer, e.g. 74029.1).');
     var p = whole(f.start_packages); if (p === '' || isNaN(p)) e.push('Enter the total package count.');
-    if ([f.oversize_count, f.overflow_count, f.start_stops].some(function (v) { return isNaN(whole(v)); })) e.push('Oversize, overflow and stops must be whole numbers.');
+    if ([f.overflow_count, f.start_stops].some(function (v) { return isNaN(whole(v)); })) e.push('Overflow and stops must be whole numbers.');
     if (tt.some(function (t) { return isNaN(t.packages); })) e.push('Tote counts must be whole numbers.');
-    if (allowTest && !preview && f.mode !== 'real' && f.mode !== 'test') e.push('Choose Real route or Test.');
     return e;
   }
   function startWarnings(f) {
     var p = whole(f.start_packages), tt = totes(f.totes), w = [];
     if (tt.length && typeof p === 'number' && !isNaN(p)) {
-      var t = sum(tt.map(function (x) { return x.packages; })) + sum([whole(f.oversize_count), whole(f.overflow_count)]);
-      if (t !== p) w.push('Totes + oversize + overflow = ' + t + ', but total packages = ' + p + '. Double-check (saving is still allowed).');
+      var t = sum(tt.map(function (x) { return x.packages; })) + sum([whole(f.overflow_count)]);
+      if (t !== p) w.push('Totes + overflow = ' + t + ', but total packages = ' + p + '. Double-check (saving is still allowed).');
     }
     return w;
   }
@@ -51,10 +50,17 @@
     var acc = d + r + (typeof m === 'number' && !isNaN(m) ? m : 0);
     return { accounted: acc, started: s, diff: acc - s, ok: acc === s, text: d + ' delivered + ' + r + ' returned + ' + (m || 0) + ' missing = ' + acc + ' of ' + s + ' started' + (acc === s ? ' — OK' : ' — difference ' + (acc - s)) };
   }
-  function startPayload(f, allowTest, preview) {
+  function startPayload(f, allowTest, preview, forceTest) {
     return { route_name: pick(f.route, f.routeOther), vehicle: pick(f.vehicle, f.vehicleOther), start_odometer: String(odo(f.start_odometer)), start_packages: whole(f.start_packages),
-      totes: totes(f.totes), oversize_count: whole(f.oversize_count), overflow_count: whole(f.overflow_count), start_stops: whole(f.start_stops),
-      start_note: String(f.start_note || '').trim().slice(0, 500), is_test: preview ? true : allowTest ? f.mode === 'test' : false };
+      totes: totes(f.totes), oversize_count: '', overflow_count: whole(f.overflow_count), start_stops: whole(f.start_stops),
+      start_note: String(f.start_note || '').trim().slice(0, 500), is_test: !!(preview || forceTest || (allowTest && f.mode === 'test')) };
+  }
+  function startReviewHtml(s, startTime, esc) {   // read-only Starting numbers for the end-route / in-progress screens
+    var tote = (s.totes || []).filter(function (x) { return x.label || x.packages !== '' && x.packages != null; }).map(function (x) { return (x.label || 'Tote') + (x.packages === '' || x.packages == null ? '' : ' · ' + x.packages); }).join('; ');
+    var rows = [['Route', s.route_name], ['Vehicle', s.vehicle], ['Start mileage', s.start_odometer], ['Start packages', s.start_packages],
+      ['Totes', tote || s.totes_text], ['Overflow', s.overflow_count], ['Start stops', s.start_stops], ['Start note', s.start_note], ['Start time', startTime]];
+    return '<details><summary><b>Starting numbers</b></summary>' + rows.filter(function (r) { return r[1] !== '' && r[1] != null; }).map(function (r) {
+      return '<div class="dh"><span>' + esc(r[0]) + '</span><b>' + esc(String(r[1])) + '</b></div>'; }).join('') + '</details>';
   }
   function finishPayload(g) {
     return { end_odometer: String(odo(g.end_odometer)), delivered_packages: whole(g.delivered_packages), returned_packages: whole(g.returned_packages),
@@ -71,6 +77,6 @@
     return [cols].concat(list.map(function (r) { return cols.map(function (c) { return r[c]; }); })).map(function (row) { return row.map(q).join(','); }).join('\n') + '\n';
   }
   var api = { ROUTES: ROUTES, VEHICLES: VEHICLES, whole: whole, odo: odo, totes: totes, validateStart: validateStart, startWarnings: startWarnings, validateFinish: validateFinish,
-    miles: miles, finishCheck: finishCheck, startPayload: startPayload, finishPayload: finishPayload, newRouteId: newRouteId, postLabel: postLabel, routesCsv: routesCsv };
+    miles: miles, finishCheck: finishCheck, startPayload: startPayload, finishPayload: finishPayload, startReviewHtml: startReviewHtml, newRouteId: newRouteId, postLabel: postLabel, routesCsv: routesCsv };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.WTD = api;
 })(typeof window !== 'undefined' ? window : this);
