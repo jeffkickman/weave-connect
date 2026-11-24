@@ -24,7 +24,7 @@
       (r.is_test ? '<span class="pill p-bad">TEST</span>' : '') + '<span class="pill ' + (fin ? 'p-off' : 'p-on') + '">' + (fin ? 'finished' : 'on route') + '</span></div>' +
       '<div class="muted">' + esc(A.dayLabel(r.date_ct)) + ' · ' + esc(r.vehicle) + '</div>' +
       '<div><b>Start</b> ' + esc(X.ctTime(r.started_at_utc)) + ' · mileage ' + n(r.start_odometer) + ' · <b>' + n(r.start_packages) + '</b> packages' + (r.totes_text ? ' · totes ' + esc(r.totes_text) : '') +
-      ' · oversize ' + n(r.oversize_count) + ' · overflow ' + n(r.overflow_count) + (r.start_stops !== '' ? ' · ' + esc(r.start_stops) + ' stops' : '') + '</div>' +
+      (r.oversize_count !== '' && r.oversize_count != null ? ' · oversize ' + n(r.oversize_count) : '') + ' · overflow ' + n(r.overflow_count) + (r.start_stops !== '' ? ' · ' + esc(r.start_stops) + ' stops' : '') + '</div>' +
       (fin ? '<div><b>Finish</b> ' + esc(X.ctTime(r.finished_at_utc)) + ' · mileage ' + n(r.end_odometer) + ' · <b>' + n(r.miles) + ' mi</b> · delivered <b>' + n(r.delivered_packages) + '</b> · returned ' + n(r.returned_packages) +
         (r.returned_reasons ? ' (' + esc(r.returned_reasons) + ')' : '') + ' · missing ' + n(r.missing_packages) + ' · damaged ' + n(r.damaged_packages) +
         (r.successful_stops !== '' ? ' · stops ' + esc(r.successful_stops) + ' ok / ' + n(r.unsuccessful_stops) + ' problem' : '') + '</div>' +
@@ -34,13 +34,13 @@
       '<div class="ad-row" style="margin-top:.35rem">' + post(r, 'start') + post(r, 'end') + '<button class="ghost btn-s" type="button" data-rtedit="' + esc(r.route_id) + '">Edit</button></div>' +
       '<details><summary class="muted">Post text</summary><pre style="white-space:pre-wrap;font-size:.8rem">' + esc(r.end_post_text || r.start_post_text) + '</pre></details></div>';
   }
-  var EDIT = [['route_name', 'Route'], ['vehicle', 'Vehicle'], ['start_odometer', 'Start mileage'], ['start_packages', 'Start packages'], ['oversize_count', 'Oversize'], ['overflow_count', 'Overflow'], ['start_stops', 'Start stops'],
+  var EDIT = [['route_name', 'Route'], ['vehicle', 'Vehicle'], ['start_odometer', 'Start mileage'], ['start_packages', 'Start packages'], ['overflow_count', 'Overflow'], ['start_stops', 'Start stops'],
     ['end_odometer', 'End mileage', 1], ['delivered_packages', 'Delivered', 1], ['returned_packages', 'Returned', 1], ['returned_reasons', 'Returned reasons', 1], ['missing_packages', 'Missing', 1], ['damaged_packages', 'Damaged', 1],
     ['successful_stops', 'Successful stops', 1], ['unsuccessful_stops', 'Problem stops', 1], ['end_note', 'Finish note', 1]];
   function editForm(r) {
     return '<form class="ad-card ad-f" data-rtform="' + esc(r.route_id) + '"><b>Edit ' + esc(r.employee_name) + ' · ' + esc(r.route_name) + '</b>' +
       EDIT.filter(function (f) { return !f[2] || r.status === 'finished'; }).map(function (f) { return '<label>' + f[1] + '</label><input name="' + f[0] + '" value="' + esc(r[f[0]]) + '">'; }).join('') +
-      '<label><input type="checkbox" name="is_test" style="width:auto"' + (r.is_test ? ' checked' : '') + '> TEST route (never posted, not counted)</label>' +
+      (r.is_test ? '<p class="muted">TEST route (cannot be changed to real).</p>' : '<label><input type="checkbox" name="is_test" style="width:auto"> Mark as TEST (never posted, not counted)</label>') +
       '<label>Reason for the change (required)</label><input name="edit_reason" required minlength="3" maxlength="300">' +
       '<div class="row"><button class="ghost" type="button" data-rtcancel="1">Cancel</button><button class="go" type="submit">Save</button></div></form>';
   }

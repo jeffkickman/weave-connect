@@ -11,33 +11,40 @@
   function mine() { var e = me().email; return db().routes.filter(function (r) { return r.email === e; }); }
   function isOpen(r) { return !r.finish || r.finishSync === 'error'; }
   function today(r) { return r.startedAt && WT.dateKey(Date.parse(r.startedAt)) === WT.dateKey(Date.now()); }
-  function onClock() { return WT.stateOf(WT.forOwner(db().punches, me().email)) !== 'off'; }
+  function testNow() { return !!(A.inTestMode && A.inTestMode()); }
+  function onClock() { var e = me().email; return WT.stateOf(WT.modePunches(WT.forOwner(db().punches, e), testNow() || me().role === 'admin')) !== 'off'; }
   function inp(f, v, label, mode, ph) { return '<label>' + label + '</label><input data-f="' + f + '" value="' + esc(v == null ? '' : v) + '" inputmode="' + (mode || 'numeric') + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' autocomplete="off">'; }
   function sel(f, v, opts, other, label) {
     return '<label>' + label + '</label><select data-f="' + f + '"><option value="">Choose…</option>' + opts.concat(['Other']).map(function (o) { return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>' +
       (v === 'Other' ? '<input data-f="' + f + 'Other" value="' + esc(other || '') + '" placeholder="Type it" autocomplete="off">' : '');
   }
   function syncText(s, err) { return s === 'synced' ? '<span class="tag on">saved</span>' : s === 'waiting' ? '<span class="tag na">on phone — waiting for server update</span>' : s === 'error' ? '<span class="tag off">' + esc(err || 'not saved') + '</span>' : '<span class="tag na">on phone — sending…</span>'; }
+  function startReview(s, startedAt) { return D.startReviewHtml(s, startedAt ? A.shortTime(startedAt) : '', esc); }
   function startForm(preview) {
-    var f = draft().start, w = D.startWarnings(f);
-    return '<h2>Start Route</h2>' + (preview ? '<div class="banner">Test driver screen — everything you save here is stored as TEST and is never posted.</div>' : '') +
+    var f = draft().start, w = D.startWarnings(f), test = testNow() || preview;
+    return '<h2>' + (test ? 'Start TEST Route' : 'Start Route') + '</h2>' + (preview || testNow() ? '<div class="banner">TEST — this route is never posted or counted.</div>' : '') +
       '<p class="muted">Fill this in before you leave, from your notebook / Flex screen.</p>' +
       sel('route', f.route, D.ROUTES, f.routeOther, 'Route') + sel('vehicle', f.vehicle, D.VEHICLES, f.vehicleOther, 'Vehicle') +
       inp('start_odometer', f.start_odometer, 'Starting mileage (odometer)', 'decimal', 'e.g. 74029.1') + inp('start_packages', f.start_packages, 'Total packages') +
-      '<label>Totes / bags (color or label + packages in it)</label>' + (f.totes || []).map(function (t, i) {
-        return '<div class="row"><input data-tote="' + i + '" data-k="label" value="' + esc(t.label || '') + '" placeholder="e.g. Black 473" autocomplete="off"><input data-tote="' + i + '" data-k="packages" value="' + esc(t.packages || '') + '" inputmode="numeric" placeholder="pkgs" style="max-width:6rem"></div>'; }).join('') +
+      '<label>Totes / bags (color or label + packages in it)</label>' + (f.totes || []).map(function (x, i) {
+        return '<div class="row"><input data-tote="' + i + '" data-k="label" value="' + esc(x.label || '') + '" placeholder="e.g. Black 473" autocomplete="off"><input data-tote="' + i + '" data-k="packages" value="' + esc(x.packages || '') + '" inputmode="numeric" placeholder="pkgs" style="max-width:6rem"></div>'; }).join('') +
       '<button class="ghost sm" type="button" data-drv="addtote">+ Add tote</button>' +
-      inp('oversize_count', f.oversize_count, 'Oversize (count)') + inp('overflow_count', f.overflow_count, 'Overflow / loose bags (count)') + inp('start_stops', f.start_stops, 'Stops on Flex (optional)') +
+      inp('overflow_count', f.overflow_count, 'Overflow / loose bags (packages that did not fit in a tote)') + inp('start_stops', f.start_stops, 'Stops on Flex (optional)') +
       '<label>Note (optional)</label><textarea data-f="start_note" rows="2" maxlength="500">' + esc(f.start_note || '') + '</textarea>' +
-      (allowTest && !preview ? '<label>Real route or Test? (required)</label><div class="row">' + ['real', 'test'].map(function (m) {
-        return '<label style="flex:1;margin:0;padding:.7rem;border:1px solid #d7d1c6;border-radius:10px;font-size:1rem;color:#1a1a1a"><input type="radio" name="drvMode" data-f="mode" value="' + m + '"' + (f.mode === m ? ' checked' : '') + ' style="width:auto"> ' + (m === 'real' ? 'Real route' : 'Test') + '</label>'; }).join('') + '</div>' : '') +
       '<p class="muted" data-live style="color:#8a6d1f">' + esc(w.join(' ')) + '</p><p class="err" data-err hidden></p>' +
-      '<button class="go big" type="button" data-drv="start">Start Route</button>';
+      '<button class="go big" type="button" data-drv="start">' + (test ? 'Submit TEST Start Route' : 'Start Route') + '</button>';
+  }
+  function progressView(r) {
+    var s = r.start;
+    return '<h2>Route in progress — ' + esc(s.route_name) + (s.is_test ? ' <span class="tag off">TEST</span>' : '') + '</h2>' +
+      '<p class="muted">Started ' + esc(A.shortTime(r.startedAt)) + ' · ' + esc(s.vehicle) + ' ' + syncText(r.startSync, r.err) + '</p>' +
+      startReview(s, r.startedAt) +
+      '<button class="go big" type="button" data-drv="toend">' + (s.is_test ? 'End TEST Route' : 'End Route') + '</button>';
   }
   function endForm(r) {
     var g = draft().finish, s = r.start, m = D.miles(s.start_odometer, g.end_odometer), c = D.finishCheck(g, s);
     return '<h2>End Route — ' + esc(s.route_name) + (s.is_test ? ' <span class="tag off">TEST</span>' : '') + '</h2>' +
-      '<p class="muted">Started ' + esc(A.shortTime(r.startedAt)) + ' · ' + esc(s.vehicle) + ' · start mileage ' + esc(s.start_odometer) + ' · ' + esc(s.start_packages) + ' packages ' + syncText(r.startSync, r.err) + '</p>' +
+      startReview(s, r.startedAt) +
       (r.finishSync === 'error' ? '<p class="err">' + esc(r.err || 'Not saved') + '</p>' : '') +
       inp('end_odometer', g.end_odometer, 'Ending mileage (odometer)', 'decimal') + '<p class="muted" data-miles>' + (m != null ? m + ' miles driven' : '') + '</p>' +
       inp('delivered_packages', g.delivered_packages, 'Packages delivered') + inp('returned_packages', g.returned_packages, 'Packages returned / undelivered (0 if none)') +
@@ -46,7 +53,8 @@
       inp('successful_stops', g.successful_stops, 'Successful stops on Flex (optional)') + inp('unsuccessful_stops', g.unsuccessful_stops, 'Unsuccessful / problem stops (optional)') +
       '<label>Notes (optional; required if anything is missing or damaged)</label><textarea data-f="end_note" rows="2" maxlength="800">' + esc(g.end_note || '') + '</textarea>' +
       '<p class="muted" data-live>' + (c ? 'Check: ' + esc(c.text) : '') + '</p><p class="err" data-err hidden></p>' +
-      '<button class="go big" type="button" data-drv="finish">Finish Route</button>';
+      '<div class="row"><button class="ghost" type="button" data-drv="back">Back</button><button class="ghost" type="button" data-drv="clearend">Clear form</button></div>' +
+      '<button class="go big" type="button" data-drv="finish">' + (s.is_test ? 'Submit TEST End Route' : 'Finish Route') + '</button>';
   }
   function doneList(preview) {
     var rs = mine().filter(function (r) { return today(r) && (!isOpen(r) || r.startSync === 'error') && !!r.preview === !!preview; });
@@ -60,10 +68,14 @@
   }
   function body(preview) {
     var open = mine().filter(function (r) { return isOpen(r) && !!r.preview === !!preview && r.startSync !== 'error'; })[0];
-    if (open) return endForm(open) + doneList(preview);
+    if (open) {
+      var routeTest = !!open.start.is_test, modeTest = testNow() || !!preview;
+      if (modeTest !== routeTest) return '<h2>Route in progress — ' + esc(open.start.route_name) + (routeTest ? ' <span class="tag off">TEST</span>' : '') + '</h2><p class="muted">' +
+        (routeTest ? 'You have a TEST route open. Enter test mode to continue it.' : 'You have a real route open. Exit test mode to continue it.') + '</p>' + startReview(open.start, open.startedAt) + doneList(preview);
+      return (draft().endOpen ? endForm(open) : progressView(open)) + doneList(preview);
+    }
     if (preview || onClock()) return startForm(preview) + doneList(preview);
-    return '<h2>Route</h2><p class="muted">Clock in first, then the Start Route form appears here.</p>' +
-      (allowTest ? '<label style="font-size:1rem;color:#1a1a1a"><input type="checkbox" id="testShift" style="width:auto"> This is a test shift (practice only, not counted as hours)</label>' : '') + doneList(false);
+    return '<h2>Route</h2><p class="muted">Clock in first, then the Start Route form appears here.</p>' + doneList(false);
   }
   function paint(el, preview, force) {
     if (!el) return; var key = JSON.stringify([preview, onClock(), allowTest, mine().map(function (r) { return [r.cid, r.startSync, r.finishSync, !!r.finish, r.server && r.server.end_post_status]; })]);
@@ -90,23 +102,26 @@
     var b = ev.target.closest('[data-drv]'); if (!b) return; var h = holder(b); if (!h) return; var a = b.dataset.drv, d = draft();
     var err = function (list) { var p = h.el.querySelector('[data-err]'); if (p) { p.textContent = list.join(' '); p.hidden = !list.length; } if (list.length) A.flash(list[0], true); };
     if (a === 'addtote') { d.start.totes.push({}); A.save(); return paint(h.el, h.preview, true); }
+    if (a === 'toend') { d.endOpen = true; A.save(); return paint(h.el, h.preview, true); }
+    if (a === 'back') { d.endOpen = false; A.save(); return paint(h.el, h.preview, true); }
+    if (a === 'clearend') { if (!window.confirm('Clear the end-route form? Starting numbers stay. Anything you typed here and have not submitted will be erased.')) return; d.finish = {}; A.save(); return paint(h.el, h.preview, true); }
     if (a === 'start') {
       var e = D.validateStart(d.start, allowTest, h.preview); if (e.length) return err(e);
-      var r = { cid: D.newRouteId(window.crypto), email: me().email, preview: h.preview, startedAt: new Date().toISOString(), start: D.startPayload(d.start, allowTest, h.preview), startSync: 'pending', finish: null };
-      db().routes.push(r); d.start = { totes: [{}, {}, {}], vehicle: d.start.vehicle, vehicleOther: d.start.vehicleOther }; d.finish = {}; A.save();
+      var r = { cid: D.newRouteId(window.crypto), email: me().email, preview: h.preview, startedAt: new Date().toISOString(), start: D.startPayload(d.start, allowTest, h.preview, testNow()), startSync: 'pending', finish: null };
+      db().routes.push(r); d.start = { totes: [{}, {}, {}], vehicle: d.start.vehicle, vehicleOther: d.start.vehicleOther }; d.finish = {}; d.endOpen = false; A.save();
       A.flash('Route started at ' + A.shortTime(r.startedAt) + (r.start.is_test ? ' (TEST)' : '') + '.'); paint(h.el, h.preview, true); return sync();
     }
     if (a === 'finish') {
       var o = mine().filter(function (x) { return isOpen(x) && !!x.preview === h.preview && x.startSync !== 'error'; })[0]; if (!o) return;
       var e2 = D.validateFinish(d.finish, o.start); if (e2.length) return err(e2);
-      o.finish = D.finishPayload(d.finish); o.finishedAt = new Date().toISOString(); o.finishSync = 'pending'; o.err = ''; d.finish = {}; A.save();
+      o.finish = D.finishPayload(d.finish); o.finishedAt = new Date().toISOString(); o.finishSync = 'pending'; o.err = ''; d.finish = {}; d.endOpen = false; A.save();
       var m = D.miles(o.start.start_odometer, o.finish.end_odometer); A.flash('Route finished — ' + m + ' miles.'); paint(h.el, h.preview, true); return sync();
     }
     var rr = mine().filter(function (x) { return x.cid === b.dataset.cid; })[0]; if (!rr) return;
     if (a === 'discard' && !window.confirm('Discard this route? It was not saved on the server.')) return;
     db().routes.splice(db().routes.indexOf(rr), 1);
     if (a === 'edit') { var s = rr.start; d.start = { route: D.ROUTES.indexOf(s.route_name) >= 0 ? s.route_name : 'Other', routeOther: s.route_name, vehicle: D.VEHICLES.indexOf(s.vehicle) >= 0 ? s.vehicle : 'Other', vehicleOther: s.vehicle,
-      start_odometer: s.start_odometer, start_packages: s.start_packages, totes: s.totes.length ? s.totes : [{}], oversize_count: s.oversize_count, overflow_count: s.overflow_count, start_stops: s.start_stops, start_note: s.start_note, mode: s.is_test ? 'test' : 'real' }; if (rr.finish) d.finish = rr.finish; }
+      start_odometer: s.start_odometer, start_packages: s.start_packages, totes: s.totes.length ? s.totes : [{}], overflow_count: s.overflow_count, start_stops: s.start_stops, start_note: s.start_note }; if (rr.finish) d.finish = rr.finish; }
     A.save(); repaint(true);
   });
 
@@ -159,5 +174,5 @@
   window.addEventListener('online', function () { sync(); });
   setInterval(function () { sync(); }, 60000);
   window.WTDriver = { mount: mount, sync: sync, refresh: function () { lastToday = 0; refresh(); },
-    testShift: function () { var c = $('testShift'); return !!(c && c.checked && allowTest && me().role === 'driver'); } };
+    testShift: function () { return testNow(); } };
 })();

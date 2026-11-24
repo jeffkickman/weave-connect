@@ -1,11 +1,9 @@
-/* Weave Time v6 — driver "Undelivered packages" card (label photo -> on-phone OCR -> TBA the driver confirms + reason), the
-   "Post to group" button after a route is finished (Atlas is the only one who posts; the button only queues it), and the upload
-   queue for label photos, auto-fill screenshots and OCR-learning logs. Everything waits on the phone until the server has the route. */
+/* Weave Time — undelivered card (label photo, TBA, reason), Post to group, upload queue. */
 (function () {
   'use strict';
   var A = window.WTApp, O = window.WTOcr, M = window.WTMedia; if (!A || !O || !M) return;
   var esc = A.esc, S = A.settings, $ = function (id) { return document.getElementById(id); };
-  var forms = {}, serverItems = {}, lastList = {}, busy = false, mounts = { undCard: false };
+  var serverItems = {}, lastList = {}, busy = false, mounts = { undCard: false };
   function db() { var d = A.db(); d.undItems = d.undItems || []; d.wtJobs = d.wtJobs || []; d.routes = d.routes || []; return d; }
   function me() { return A.me() || {}; }
   function routesFor(preview) { var e = me().email; return db().routes.filter(function (r) { return r.email === e && !!r.preview === !!preview; }); }
@@ -13,7 +11,9 @@
   function openRoute(preview) { return routesFor(preview).filter(function (r) { return (!r.finish || r.finishSync === 'error') && r.startSync !== 'error'; })[0] || null; }
   function target(preview) { var o = openRoute(preview); if (o) return o; var f = routesFor(preview).filter(function (r) { return r.finish && isToday(r); }); return f[f.length - 1] || null; }
   function isTest(r) { return !!(r.start && r.start.is_test) || !!(r.server && r.server.is_test === true); }
-  function form(preview) { var k = preview ? 'p' : 'd'; return forms[k] = forms[k] || {}; }
+  function testNow() { return !!(A.inTestMode && A.inTestMode()); }
+  function formKey(preview) { return (me().email || '?') + (preview ? ':p' : ':d'); }
+  function form(preview) { var d = db(); d.undDrafts = d.undDrafts || {}; var k = formKey(preview); return d.undDrafts[k] = d.undDrafts[k] || {}; }
   function items(r) {
     var loc = db().undItems.filter(function (x) { return x.routeCid === r.cid; }), seen = {}; loc.forEach(function (x) { seen[x.cid] = 1; });
     (serverItems[r.cid] || []).forEach(function (s) { if (!seen[s.client_id]) loc.push({ cid: s.client_id, routeCid: r.cid, tba: s.tba, reason: s.reason, note: s.note, sync: 'synced', server: s }); });
@@ -36,23 +36,25 @@
   function body(preview) {
     var r = target(preview); if (!r) return '';
     var f = form(preview), list = items(r), open = !r.finish || r.finishSync === 'error', fin = routesFor(preview).filter(function (x) { return x.finish && isToday(x) && x.finishSync !== 'error'; });
-    var tp = f.tba ? O.tbaProblem(f.tba) : '';
-    var h = '<h2>Undelivered packages — ' + esc(r.start.route_name) + (isTest(r) ? ' <span class="tag off">TEST</span>' : '') + '</h2>' +
-      '<p class="muted">For each package you bring back: photo of the label, check the TBA number, pick the reason. Jeff / Atlas use this to dispute it with Amazon.</p>' +
+    var test = isTest(r) || testNow(), tp = f.tba ? O.tbaProblem(f.tba) : '', help = (f.reason && O.REASON_HELP && O.REASON_HELP[f.reason]) ? '<p class="muted">' + esc(O.REASON_HELP[f.reason]) + '</p>' : '';
+    var h = '<h2>Undelivered packages — ' + esc(r.start.route_name) + (isTest(r) ? ' <span class="tag off">TEST</span>' : '') + '</h2>';
+    if (!f.entry) h += '<p class="muted">Log each package you bring back. Jeff / Atlas use this for Amazon disputes.</p><button class="go sm" type="button" data-und="open">' + (test ? 'Add TEST package' : 'Add undelivered package') + '</button>';
+    else h += '<p class="muted">Photo of the label, check the TBA, pick a reason.</p>' +
       '<button class="ghost" type="button" data-und="pick" style="border-style:dashed">📷 Take photo of label</button>' +
       (f.thumb ? '<img src="' + f.thumb + '" alt="label photo" style="max-width:140px;border-radius:8px;margin:.4rem 0">' : '') +
       (f.status ? '<p class="muted" data-ustatus>' + esc(f.status) + '</p>' : '') +
       '<label>TBA number</label><input data-uf="tba" value="' + esc(f.tba || '') + '" autocomplete="off" autocapitalize="characters" placeholder="TBA + 12 digits"' + (f.fromOcr ? ' style="background:#fff4c2"' : '') + '>' +
       (tp ? '<p class="muted" data-tbawarn style="color:#8a6d1f">' + esc(tp.replace(/^warn:/, '')) + '</p>' : '<p class="muted" data-tbawarn></p>') +
-      '<label style="font-size:1rem;color:#1a1a1a"><input type="checkbox" data-uf="confirmed" style="width:auto"' + (f.confirmed ? ' checked' : '') + '> I checked this TBA against the label</label>' +
+      '<label style="font-size:1rem;color:#1a1a1a"><input type="checkbox" data-uf="confirmed" style="width:auto"' + (f.confirmed ? ' checked' : '') + '> I checked this TBA on the label</label>' +
       (f.ocrText !== undefined ? '<details><summary class="muted">What the phone read from the photo</summary><pre style="white-space:pre-wrap;font-size:.75rem">' + esc(f.ocrText || '(no text found)') + '</pre></details>' : '') +
-      '<label>Why wasn’t it delivered? (required)</label><select data-uf="reason"><option value="">Choose…</option>' + O.REASONS.map(function (x) { return '<option' + (x === f.reason ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' +
+      '<label>Why wasn’t it delivered? (required)</label><select data-uf="reason"><option value="">Choose…</option>' + O.REASONS.map(function (x) { return '<option' + (x === f.reason ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' + help +
       '<label>Note' + (/^Other/.test(f.reason || '') ? ' (required)' : ' (optional)') + '</label><textarea data-uf="note" rows="2" maxlength="500">' + esc(f.note || '') + '</textarea>' +
-      '<p class="err" data-uerr hidden></p><button class="navy" type="button" data-und="add">Add package</button>';
+      '<p class="err" data-uerr hidden></p><div class="row"><button class="ghost" type="button" data-und="back">Back</button><button class="ghost" type="button" data-und="clear">Clear form</button></div>' +
+      '<button class="navy" type="button" data-und="add">' + (test ? 'Submit TEST package' : 'Add package') + '</button>';
     h += list.length ? '<h2 style="margin-top:1rem">Logged (' + list.length + ')</h2><ul class="pl">' + list.map(function (x) {
       return '<li><b>' + esc(x.tba) + '</b> · ' + esc(x.reason) + (x.note ? ' — ' + esc(x.note) : '') + ' ' + syncTag(x) + (x.photoErr ? ' <span class="muted">(photo not saved)</span>' : '') +
-        (open || x.sync !== 'synced' ? ' <button class="ghost sm" type="button" data-und="del" data-cid="' + esc(x.cid) + '">Delete</button>' : '') + '</li>'; }).join('') + '</ul>' : '<p class="muted">No undelivered packages logged for this route.</p>';
-    if (fin.length) h += '<h2 style="margin-top:1rem">Post to the group</h2><p class="muted">After you finish, tap Post. Atlas posts your numbers and undelivered list in the group.</p><ul class="pl">' +
+        (open || x.sync !== 'synced' ? ' <button class="ghost sm" type="button" data-und="del" data-cid="' + esc(x.cid) + '">Delete</button>' : '') + '</li>'; }).join('') + '</ul>' : '<p class="muted">None logged for this route yet.</p>';
+    if (fin.length) h += '<h2 style="margin-top:1rem">Post to the group</h2><p class="muted">After you finish, tap Post. Atlas posts the numbers and undelivered list.</p><ul class="pl">' +
       fin.map(function (x) { return '<li><b>' + esc(x.start.route_name) + '</b> · ' + items(x).length + ' undelivered logged<div class="row">' + postBtn(x) + '</div></li>'; }).join('') + '</ul>';
     return h;
   }
@@ -67,11 +69,11 @@
 
   document.addEventListener('input', function (ev) {
     var t = ev.target, h = holder(t); if (!h || !t.dataset.uf) return; var f = form(h.preview), k = t.dataset.uf;
-    f[k] = t.type === 'checkbox' ? t.checked : t.value;
+    f[k] = t.type === 'checkbox' ? t.checked : t.value; A.save();
     if (k === 'tba') { f.fromOcr = false; var w = h.el.querySelector('[data-tbawarn]'), p = f.tba ? O.tbaProblem(f.tba) : ''; if (w) w.textContent = p.replace(/^warn:/, ''); }
     if (k === 'reason') bump(h);
   });
-  // one camera input outside the card, so a redraw while the camera is open never loses the photo
+  // camera input lives outside the card so a redraw never drops the photo
   var pickFor = null, picker = document.createElement('input'); picker.type = 'file'; picker.accept = 'image/*'; picker.setAttribute('capture', 'environment'); picker.hidden = true; document.body.appendChild(picker);
   picker.addEventListener('change', function () {
     var el = pickFor && document.querySelector('[data-undbox="' + pickFor + '"]'); if (!el || !picker.files || !picker.files[0]) return;
@@ -88,17 +90,20 @@
   });
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-und]'); if (!b) return; var h = holder(b); if (!h) return; var a = b.dataset.und, f = form(h.preview), r = target(h.preview); if (!r) return;
+    if (a === 'open') { f.entry = true; A.save(); return bump(h); }
+    if (a === 'back') { f.entry = false; A.save(); return bump(h); }
+    if (a === 'clear') { if (!window.confirm('Clear unsaved TBA, photo, reason and note? Logged packages stay.')) return; db().undDrafts[formKey(h.preview)] = { entry: true }; A.save(); return bump(h); }
     if (a === 'pick') { pickFor = h.el.dataset.undbox; picker.value = ''; return picker.click(); }
     var err = function (m) { var p = h.el.querySelector('[data-uerr]'); if (p) { p.textContent = m; p.hidden = !m; } if (m) A.flash(m, true); };
     if (a === 'add') {
-      var tba = O.normTba(f.tba), p = O.tbaProblem(tba);
+      var tba = O.normTba(f.tba), p = O.tbaProblem(tba), test = isTest(r) || testNow();
       if (p && !/^warn:/.test(p)) return err(p);
       if (!f.confirmed) return err('Check the TBA against the label and tick the box.');
       if (!f.reason) return err('Choose why it was not delivered.');
       if (/^Other/.test(f.reason) && String(f.note || '').trim().length < 3) return err('Add a note for "Other".');
       if (items(r).some(function (x) { return x.tba === tba; })) return err(tba + ' is already on the list.');
       var it = { cid: M.newId('u'), email: me().email, routeCid: r.cid, tba: tba, reason: f.reason, note: String(f.note || '').trim(), ocr_text: f.ocrText || '', hasPhoto: !!f.blob, sync: 'pending', createdAt: new Date().toISOString() };
-      var save = function () { db().undItems.push(it); forms[h.preview ? 'p' : 'd'] = {}; A.save(); A.flash('Added ' + tba + '.'); bump(h); run(); };
+      var save = function () { db().undItems.push(it); db().undDrafts[formKey(h.preview)] = {}; A.save(); A.flash('Added ' + tba + (test ? ' (TEST)' : '') + '.'); bump(h); run(); };
       return f.blob ? M.store.put(it.cid, f.blob).then(save, function () { it.hasPhoto = false; it.photoErr = true; save(); }) : save();
     }
     if (a === 'del') {
@@ -112,7 +117,7 @@
       b.disabled = true;
       call({ action: 'route_request_post', route_id: rr.route_id, client_route_id: rr.cid }).then(function (j) {
         if (j.ok) { rr.server = j.route; rr.postAsked = true; A.save(); A.flash('Queued. Atlas will post it in the group.'); }
-        else if (/Unknown action/i.test(j.error || '')) A.flash('The Weave Time server needs its update before Post works. Atlas will still see your finished route.', true);
+        else if (/Unknown action/i.test(j.error || '')) A.flash('Server update needed before Post works. Atlas will still see the finished route.', true);
         else A.flash(j.error || 'Not queued', true);
         bump(h);
       }, function () { b.disabled = false; A.flash('No connection. Try again.', true); });
@@ -161,7 +166,7 @@
     };
     return chain.then(fin, fin);
   }
-  function refreshList() {   // server copy of today's rows (e.g. after a phone change)
+  function refreshList() {
     if (!canSend()) return; [false, true].forEach(function (pv) {
       var r = target(pv); if (!r || !r.route_id || Date.now() - (lastList[r.cid] || 0) < 60000) return; lastList[r.cid] = Date.now();
       call({ action: 'undelivered_list', route_id: r.route_id }).then(function (j) { if (j.ok) { serverItems[r.cid] = j.items || []; repaint(); } }, function () {});

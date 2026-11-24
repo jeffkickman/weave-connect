@@ -26,5 +26,12 @@ t('end form: delivered vs undelivered, successful vs unsuccessful kept apart', (
   assert.deepStrictEqual(r.fields, { delivered_packages: '130', returned_packages: '4', successful_stops: '101', unsuccessful_stops: '3' });
   assert.deepStrictEqual(O.parseScreens('nothing useful', 'end', []).fields, {});
 });
-t('reasons list', () => { assert.strictEqual(O.REASONS.length, 12); assert(O.REASONS[11].startsWith('Other')); });
+t('reasons list', () => {
+  assert.strictEqual(O.REASONS.length, 13); assert(O.REASONS[12].startsWith('Other'));
+  assert(O.REASONS[11].startsWith('Oversize / overweight')); assert(/50 lb/.test(O.REASON_HELP[O.REASONS[11]]));
+});
+t('oversized OCR maps to overflow, never oversize_count', () => {
+  const r = O.parseScreens('Oversized 4', 'start', []);
+  assert.strictEqual(r.fields.overflow_count, '4'); assert.strictEqual(r.fields.oversize_count, undefined);
+});
 console.log(n + ' ocr-core tests passed');
