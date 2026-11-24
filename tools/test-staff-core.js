@@ -81,6 +81,15 @@ t('employee-facing location label never leaks coords', () => {
   assert.strictEqual(WT.locationLabel({ lat: null, locStatus: 'timeout' }), 'Location unavailable');
   assert.strictEqual(WT.locationLabel({ onsite_status: 'unknown' }), 'Location unavailable');
 });
+t('test mode is per user; admin always test; modePunches splits real vs TEST', () => {
+  assert(!WT.inTestMode({}, { email: 'a@x.com', role: 'employee' }));
+  assert(WT.inTestMode({ testMode: { email: 'a@x.com', on: true } }, { email: 'a@x.com', role: 'driver' }));
+  assert(!WT.inTestMode({ testMode: { email: 'a@x.com', on: true } }, { email: 'b@x.com', role: 'driver' }));
+  assert(WT.inTestMode({ testMode: { email: 'j@x.com', on: false } }, { email: 'j@x.com', role: 'admin' }));
+  const ps = [{ isTest: true, punch_id: 't' }, { punch_id: 'r' }];
+  assert.deepStrictEqual(WT.modePunches(ps, true).map(function (p) { return p.punch_id; }), ['t']);
+  assert.deepStrictEqual(WT.modePunches(ps, false).map(function (p) { return p.punch_id; }), ['r']);
+});
 t('punch ids', () => {
   const ids = new Set(); for (let i = 0; i < 500; i++) ids.add(WT.newPunchId(null)); assert.strictEqual(ids.size, 500);
   assert(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(WT.newPunchId(null)));

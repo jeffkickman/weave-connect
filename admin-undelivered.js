@@ -73,9 +73,7 @@
   };
   W.views.testdrvAfter = function () { if (ta) ta(); if (window.WTUnd) window.WTUnd.mount('undPreview', true); };
   A.on('render', function (sc) {
-    var bar = $('tcBar'), adm = (A.me() || {}).role === 'admin';
     if (sc === 'login' && A.db().adminTestClock) { A.db().adminTestClock = false; A.save(); }
-    if (bar) bar.hidden = !(sc === 'app' && adm);
   });
   document.addEventListener('click', function (ev) { if (ev.target.id === 'tcBack') { A.db().adminTestClock = false; A.save(); A.render(); } });
 })();

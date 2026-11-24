@@ -19,7 +19,7 @@
 
   var A = root.WTApp; if (!A) return;
   var S = A.settings, lastMs = 0, inFlight = false, denied = false, unsupported = false;
-  function myState() { var e = A.me(); return e ? WT.stateOf(WT.forOwner(A.db().punches, e.email)) : 'off'; }
+  function myState() { var e = A.me(); return e ? WT.stateOf(WT.modePunches(WT.forOwner(A.db().punches, e.email), A.inTestMode && A.inTestMode())) : 'off'; }
   function inputs() {
     var s = A.db().session || {}, e = s.employee || {};
     return { signedIn: !!s.token, role: e.role, testClock: !!A.db().adminTestClock, mustChange: !!s.mustChangePassword, authNeeded: !!s.authNeeded,
