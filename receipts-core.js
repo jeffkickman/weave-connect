@@ -1,18 +1,23 @@
-/* Weave Time — company card receipt helpers: job list, validation, payload, optional OCR parse. */
+/* Weave Time — receipt helpers: jobs, payment, validation, payload, optional OCR parse. Everyone may log a receipt. */
 (function (root) {
   'use strict';
   var JOBS = ['Office - 1510 E Three Notch St', 'Flip house', 'Amazon routes/vehicles', 'Insurance agency', 'Other'];
+  var PAYS = [{ id: 'company', label: 'Company card' }, { id: 'personal', label: 'My own money (reimburse me)' }, { id: 'unsure', label: 'Not sure' }];
+  var PAID = ['personal card', 'cash', 'other'];
   function jobs(list) { return (list && list.length) ? list : JOBS; }
   function todayCt(ms) { return (root.WT && WT.dateKey) ? WT.dateKey(ms || Date.now()) : ''; }
   function money(v) {
     var n = Number(String(v == null ? '' : v).replace(/[$,\s]/g, ''));
     return isFinite(n) && n > 0 && n < 1000000 ? (Math.round(n * 100) / 100).toFixed(2) : '';
   }
-  function last4(v) { return String(v || '').replace(/\D/g, '').slice(0, 4); }
-  function canCard(emp) {
-    if (!emp) return false;
-    var rs = emp.roles && emp.roles.length ? emp.roles : [emp.role];
-    return rs.indexOf('cardholder') !== -1 || rs.indexOf('admin') !== -1 || emp.role === 'admin';
+  function last4(v) { var d = String(v || '').replace(/\D/g, ''); return d.slice(0, 5); }
+  function validLast4(v) { var d = last4(v); return d.length === 4 || d.length === 5 ? d : ''; }
+  function cardLabel(c) {
+    if (!c) return '';
+    if (c.label) return c.label;
+    var prod = String(c.product || '').trim().split(/\s+/)[0] || '', d = last4(c.last4);
+    var tag = (c.id_kind === 'amex_suffix' || d.length === 5) ? ('6-' + d) : ('••' + d);
+    return [c.issuer, prod, tag].filter(Boolean).join(' ');
   }
   function validate(f, jobList) {
     f = f || {};
@@ -20,7 +25,11 @@
     if (f.charge_date > todayCt()) return 'Charge date cannot be in the future.';
     if (!money(f.amount)) return 'Enter the amount.';
     if (String(f.merchant || '').trim().length < 2) return 'Enter the merchant.';
-    if (!/^\d{4}$/.test(last4(f.card_last4))) return 'Card last 4 must be four digits.';
+    if (['company', 'personal', 'unsure'].indexOf(f.payment_type) === -1) return 'Choose how it was paid.';
+    var d = last4(f.card_last4);
+    if (d && !validLast4(d)) return 'Card last 4 must be 4 or 5 digits.';
+    if (f.payment_type === 'company' && !validLast4(d)) return 'Enter the card last 4 (or the 5-digit Amex suffix).';
+    if (f.payment_type === 'personal' && PAID.indexOf(f.paid_with) === -1) return 'Say how you paid (personal card, cash, or other).';
     if (String(f.purpose || '').trim().length < 2) return 'Say what it was for.';
     if (jobs(jobList).indexOf(f.job_property) === -1) return 'Choose a job / property.';
     if (f.job_property === 'Other' && String(f.note || '').trim().length < 3) return 'Add a note for "Other".';
@@ -30,11 +39,11 @@
   function payload(f, isTest) {
     return {
       charge_date: f.charge_date, amount: money(f.amount), merchant: String(f.merchant || '').trim(),
-      card_last4: last4(f.card_last4), purpose: String(f.purpose || '').trim(), job_property: f.job_property,
+      payment_type: f.payment_type, paid_with: f.paid_with || '', card_id: f.card_id || '',
+      card_last4: validLast4(f.card_last4) || '', purpose: String(f.purpose || '').trim(), job_property: f.job_property,
       note: String(f.note || '').trim(), is_test: !!isTest, client_id: f.cid
     };
   }
-  // Confident OCR only. Amount needs cents; date not in the future and within 2 years; merchant = first decent line.
   function parseReceipt(text) {
     var raw = String(text || ''), out = {}, lines = raw.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
     var amounts = [], reAmt = /(?:total|amount|grand\s*total)?[^\d$]{0,12}\$?\s*(\d{1,5}\.\d{2})\b/ig, m, lastTotal = '';
@@ -67,5 +76,5 @@
     }
     return out;
   }
-  root.WTReceipts = { JOBS: JOBS, jobs: jobs, todayCt: todayCt, money: money, last4: last4, canCard: canCard, validate: validate, payload: payload, parseReceipt: parseReceipt };
+  root.WTReceipts = { JOBS: JOBS, PAYS: PAYS, PAID: PAID, jobs: jobs, todayCt: todayCt, money: money, last4: last4, validLast4: validLast4, cardLabel: cardLabel, validate: validate, payload: payload, parseReceipt: parseReceipt };
 })(typeof window !== 'undefined' ? window : global);
