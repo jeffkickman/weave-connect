@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var A = window.WTApp, X = window.WTA, S = A.settings, $ = function (id) { return document.getElementById(id); }, esc = A.esc;
-  var TABS = [['live', 'Live'], ['week', 'Week'], ['timeline', 'Timeline'], ['punches', 'Punches'], ['employees', 'Employees'], ['routes', 'Routes'], ['undelivered', 'Undelivered'], ['suggestions', 'Suggestions'], ['testdrv', 'Test (clock + driver)']];
+  var TABS = [['live', 'Live'], ['week', 'Week'], ['timeline', 'Timeline'], ['punches', 'Punches'], ['employees', 'Employees'], ['routes', 'Routes'], ['undelivered', 'Undelivered'], ['suggestions', 'Suggestions'], ['receipts', 'Receipts'], ['testdrv', 'Test (clock + driver)']];
   var st = { tab: 'live', live: null, liveAt: 0, week: null, weekStart: '', users: null }, views = {}, mapsP = null, timer = null;
   var css = document.createElement('style');
   css.textContent = 'body.wide main{max-width:980px}body.wide .flash{pointer-events:none;opacity:.96}#adTabs{display:flex;gap:.3rem;flex-wrap:wrap;margin:.5rem 0}#adTabs button{flex:1 1 30%;width:auto;min-width:5.5rem;padding:.55rem .4rem;font-size:.9rem}.ad-row button,.ad-row a{width:auto}' +
