@@ -5,7 +5,7 @@
   'use strict';
   var A = window.WTApp, X = window.WTA, W = window.WTAdmin; if (!W || !W.need) return;
   var st = W.st, esc = A.esc, $ = function (id) { return document.getElementById(id); };
-  var HELP = { employee: 'clock', contractor: 'clock, paid as contractor', office: 'clock', driver: 'clock + Start/End Route', cardholder: 'company card receipts', admin: 'admin view, no clock' };
+  var HELP = { employee: 'clock', contractor: 'clock, paid as contractor', office: 'clock', driver: 'clock + Start/End Route', cardholder: 'optional label only; everyone can log receipts', admin: 'admin view, no clock' };
   function rolesOf(u) { return u.roles && u.roles.length ? u.roles : [u.role || 'employee']; }
   function cat() { return st.roleCat || ['employee', 'driver', 'admin']; }
   function multi() { return !!st.roleCat; }
@@ -26,7 +26,7 @@
         '<label>Roles' + (multi() ? ' (pick one or more)' : '') + '</label>' + boxes('nuRoles', ['employee'], false) +
         '<div class="row"><button class="go" type="submit">Create account</button></div></form></details>' +
         (multi() ? '<details class="ad-card ad-f"><summary><b>Role list</b> <span class="muted">' + esc(cat().join(', ')) + '</span></summary><p class="muted">Add a new role here, then tick it on people. ' +
-          'Only "driver", "admin", and "cardholder" change what the app shows (routes, admin, or Card receipt); every other role clocks in normally and shows up as its own group in the week report.</p>' +
+          'Only "driver" and "admin" change the main screens (routes or admin). Everyone can log a receipt. cardholder is kept as a label only. Every other role clocks in normally and shows up as its own group in the week report.</p>' +
           '<div class="ad-row"><input id="newRole" class="ad-grow" maxlength="24" placeholder="e.g. painter" autocomplete="off"><button class="ghost btn-s" type="button" id="addRole">Add role</button></div></details>' : '') +
         st.users.map(function (u) {
           var self = u.email === me;
